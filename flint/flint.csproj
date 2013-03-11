@@ -33,6 +33,10 @@
   <PropertyGroup>
     <ApplicationIcon>flint.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Docs|AnyCPU'">
+    <OutputPath>bin\Docs\</OutputPath>
+    <DocumentationFile>bin\Docs\flint.XML</DocumentationFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -43,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EndpointSync.cs" />
     <Compile Include="Pebble.cs" />
     <Compile Include="PebbleProtocol.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
