@@ -45,7 +45,6 @@ namespace flint
         }
 
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
-        public event EventHandler<MessageReceivedEventArgs> UnknownEndpointReceived;
 
         /// <summary>
         /// Holds callbacks for the separate endpoints.  Saves a lot of typing.
@@ -119,17 +118,6 @@ namespace flint
         {
             Endpoints endpoint = (Endpoints)e.Endpoint;
             EventHandler<MessageReceivedEventArgs> handler;
-            switch (endpoint)
-            {
-                default:
-                    handler = UnknownEndpointReceived;
-                    break;
-            }
-
-            if (handler != null)
-            {
-                handler(this, new MessageReceivedEventArgs(endpoint, e.Payload));
-            }
 
             // Catchall:
             handler = MessageReceived;
