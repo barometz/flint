@@ -7,12 +7,12 @@ namespace flint
     /// Possibly a little excessive as the relevant event will most likely have 
     /// exactly one subscriber, but it's a small effort.
     /// </summary>
-    internal class MessageReceivedEventArgs : EventArgs
+    internal class RawMessageReceivedEventArgs : EventArgs
     {
         public UInt16 Endpoint { get; private set; }
         public byte[] Payload { get; private set; }
 
-        public MessageReceivedEventArgs(UInt16 endpoint, byte[] payload)
+        public RawMessageReceivedEventArgs(UInt16 endpoint, byte[] payload)
         {
             this.Endpoint = endpoint;
             this.Payload = payload;
@@ -24,7 +24,7 @@ namespace flint
     /// </summary>
     internal class PebbleProtocol
     {
-        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+        public event EventHandler<RawMessageReceivedEventArgs> RawMessageReceived;
         public event SerialErrorReceivedEventHandler SerialErrorReceived;
 
         public String Port { get; private set; }
@@ -84,12 +84,12 @@ namespace flint
             serialPort.Write(payload, 0, length);
         }
 
-        void RaiseMessageReceived(UInt16 endpoint, byte[] payload)
+        void RaiseRawMessageReceived(UInt16 endpoint, byte[] payload)
         {
-            var temp = MessageReceived;
+            var temp = RawMessageReceived;
             if (temp != null) 
             {
-                temp(this, new MessageReceivedEventArgs(endpoint, payload));
+                temp(this, new RawMessageReceivedEventArgs(endpoint, payload));
             }
         }
 
@@ -157,7 +157,7 @@ namespace flint
                         // All of the payload's been received, so read it.
                         byte[] buffer = new byte[currentPayloadSize];
                         serialPort.Read(buffer, 0, currentPayloadSize);
-                        RaiseMessageReceived(currentEndpoint, buffer);
+                        RaiseRawMessageReceived(currentEndpoint, buffer);
                         // Reset state
                         waitingState = waitingStates.NewMessage;
                         currentEndpoint = 0;
