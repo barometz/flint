@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint", "flint\flint.csproj", "{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint-test", "flint-test\flint-test.csproj", "{9B8D1C0B-D406-4E0A-9F00-254339E32642}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
