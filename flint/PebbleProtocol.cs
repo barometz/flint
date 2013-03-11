@@ -29,16 +29,16 @@ namespace flint
 
         public String Port { get; private set; }
 
-        private enum waitingStates
+        enum waitingStates
         {
             NewMessage,
             Payload
         }
         waitingStates waitingState;
 
-        private SerialPort serialPort;
-        private UInt16 currentPayloadSize = 0;
-        private UInt16 currentEndpoint = 0;
+        SerialPort serialPort;
+        UInt16 currentPayloadSize = 0;
+        UInt16 currentEndpoint = 0;
 
         /// <summary> Create a new Pebble connection
         /// </summary>
@@ -57,10 +57,38 @@ namespace flint
             serialPort.ErrorReceived += serialPort_ErrorReceived;
         }
 
+        /// <summary> Send a message to the connected Pebble.  
+        /// The payload should at most be 4096 bytes large.
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="payload"></param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the payload is too large.</exception>
+        public void sendMessage(UInt16 endpoint, byte[] payload)
+        {
+            if (payload.Length > 4096)
+            {
+                throw new ArgumentOutOfRangeException("payload", 
+                    "The payload should not be more than 4096 bytes");
+            }
+
+            UInt16 length = Convert.ToUInt16(payload.Length);
+            byte[] payloadSize = BitConverter.GetBytes(length);
+            byte[] _endpoint = BitConverter.GetBytes(endpoint);
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(payloadSize);
+                Array.Reverse(_endpoint);
+            }
+            serialPort.Write(payloadSize, 0, 2);
+            serialPort.Write(_endpoint, 0, 2);
+            serialPort.Write(payload, 0, length);
+        }
+
         void RaiseMessageReceived(UInt16 endpoint, byte[] payload)
         {
             var temp = MessageReceived;
-            if (temp != null) {
+            if (temp != null) 
+            {
                 temp(this, new MessageReceivedEventArgs(endpoint, payload));
             }
         }
@@ -103,13 +131,16 @@ namespace flint
         {
             byte[] endpoint = new byte[2];
             byte[] payloadSize = new byte[2];
-            switch (waitingState) {
+            switch (waitingState) 
+            {
                 case waitingStates.NewMessage:
-                    if (serialPort.BytesToRead >= 4) {
+                    if (serialPort.BytesToRead >= 4) 
+                    {
                         // Read new payload size and endpoint
                         serialPort.Read(payloadSize, 0, 2);
                         serialPort.Read(endpoint, 0, 2);
-                        if (BitConverter.IsLittleEndian) {
+                        if (BitConverter.IsLittleEndian) 
+                        {
                             // Data is transmitted big-endian, so flip.
                             Array.Reverse(payloadSize);
                             Array.Reverse(endpoint);
@@ -121,7 +152,8 @@ namespace flint
                     }
                     break;
                 case waitingStates.Payload:
-                    if (serialPort.BytesToRead >= currentPayloadSize) {
+                    if (serialPort.BytesToRead >= currentPayloadSize) 
+                    {
                         // All of the payload's been received, so read it.
                         byte[] buffer = new byte[currentPayloadSize];
                         serialPort.Read(buffer, 0, currentPayloadSize);
