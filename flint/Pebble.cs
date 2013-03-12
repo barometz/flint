@@ -44,7 +44,7 @@ namespace flint
         /// Holds callbacks for the separate endpoints.  Saves a lot of typing.
         /// There's probably a good reason not to do this.
         /// </summary>
-        Dictionary<Endpoints, List<EventHandler<MessageReceivedEventArgs>>> endpointEvents;
+        Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>> endpointEvents;
 
         PebbleProtocol pebbleProt;
 
@@ -52,10 +52,16 @@ namespace flint
         {
             pebbleProt = new PebbleProtocol(port);
             pebbleProt.RawMessageReceived += pebbleProt_RawMessageReceived;
-            
-            endpointEvents = new Dictionary<Endpoints,List<EventHandler<MessageReceivedEventArgs>>>();
+
+            endpointEvents = new Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>>();
         }
 
+        /// <summary> Subscribe to the event of a particular endpoint message 
+        /// being received.  This enables subscribing to any endpoint, 
+        /// including those that have yet to be discovered.
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="handler"></param>
         public void RegisterEndpointCallback(Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler)
         {
             if (handler == null)
@@ -64,25 +70,20 @@ namespace flint
             }
             if (endpointEvents.ContainsKey(endpoint) && endpointEvents[endpoint] != null)
             {
-                if (!endpointEvents[endpoint].Contains(handler))
-                {
-                    endpointEvents[endpoint].Add(handler);
-                }
+                endpointEvents[endpoint] += handler;
             }
             else
             {
-                endpointEvents[endpoint] = new List<EventHandler<MessageReceivedEventArgs>>();
-                endpointEvents[endpoint].Add(handler);
+                endpointEvents[endpoint] = new EventHandler<MessageReceivedEventArgs>(handler);
             }
         }
 
         public void DeregisterEndpointCallback(Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler)
         {
             if (endpointEvents.ContainsKey(endpoint)
-                && endpointEvents[endpoint] != null
-                && endpointEvents[endpoint].Contains(handler))
+                && endpointEvents[endpoint] != null)
             {
-                endpointEvents[endpoint].Remove(handler);
+                endpointEvents[endpoint] -= handler;
             }
         }
 
@@ -136,15 +137,12 @@ namespace flint
             }
 
             // Endpoint-specific
-            if (endpointEvents.ContainsKey(endpoint) && endpointEvents[endpoint] != null)
+            if (endpointEvents.ContainsKey(endpoint))
             {
-                var handlers = new List<EventHandler<MessageReceivedEventArgs>>(endpointEvents[endpoint]);
-                foreach (var h in handlers)
+                EventHandler<MessageReceivedEventArgs> h = endpointEvents[endpoint];
+                if (h != null)
                 {
-                    if (h != null)
-                    {
-                        h(this, new MessageReceivedEventArgs(endpoint, e.Payload));
-                    }
+                    h(this, new MessageReceivedEventArgs(endpoint, e.Payload));
                 }
             }
 
