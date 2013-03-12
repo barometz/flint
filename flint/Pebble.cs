@@ -5,9 +5,9 @@ using System.Text;
 
 namespace flint
 {
-    /// <summary>
-    /// Represents a (connection to a) Pebble.  PebbleProtocol is blissfully 
-    /// unaware of the *meaning* of anything, all that is handled here.
+    /// <summary> Represents a (connection to a) Pebble.  
+    /// PebbleProtocol is blissfully unaware of the *meaning* of anything, 
+    /// all that is handled here.
     /// </summary>
     public class Pebble
     {
@@ -77,21 +77,20 @@ namespace flint
             COMPASS = 2048
         }
 
-        uint sessionCaps;
-        uint remoteCaps;
+        
 
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<LogReceivedEventArgs> LogReceived;
         public event EventHandler<PingReceivedEventArgs> PingReceived;
         public event EventHandler<MediaControlReceivedEventArgs> MediaControlReceived;
-
-        /// <summary>
-        /// Holds callbacks for the separate endpoints.  Saves a lot of typing.
-        /// There's probably a good reason not to do this.
+        /// <summary> Holds callbacks for the separate endpoints.  
+        /// Saves a lot of typing. There's probably a good reason not to do this.
         /// </summary>
         Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>> endpointEvents;
-
+        
         PebbleProtocol pebbleProt;
+        uint sessionCaps;
+        uint remoteCaps;
 
         public Pebble(String port, uint? session_cap=null, uint? remote_caps=null)
         {
@@ -174,9 +173,8 @@ namespace flint
             }
         }
 
-        /// <summary>
-        /// Send "Now playing.." metadata to the Pebble.  The track, album and 
-        /// artist should each not be longer than 256 bytes.
+        /// <summary> Send "Now playing.." metadata to the Pebble.  
+        /// The track, album and artist should each not be longer than 256 bytes.
         /// </summary>
         /// <param name="track"></param>
         /// <param name="album"></param>
@@ -259,10 +257,9 @@ namespace flint
                 Array.Reverse(session);
                 Array.Reverse(remote);
             }
-            byte[] msg = new byte[prefix.Length + session.Length + remote.Length];
-            Array.Copy(prefix, msg, prefix.Length);
-            Array.Copy(session, 0, msg, prefix.Length, session.Length);
-            Array.Copy(remote, 0, msg, prefix.Length + session.Length, remote.Length);
+
+            byte[] msg = new byte[0];
+            msg = msg.Concat(prefix).Concat(session).Concat(remote).ToArray();
             pebbleProt.sendMessage((ushort)Endpoints.PHONE_VERSION, msg);
         }
     }

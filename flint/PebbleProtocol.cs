@@ -43,8 +43,7 @@ namespace flint
         UInt16 currentPayloadSize = 0;
         UInt16 currentEndpoint = 0;
 
-        /// <summary> Create a new Pebble connection
-        /// </summary>
+        /// <summary> Create a new Pebble connection </summary>
         /// <param name="port"></param>
         public PebbleProtocol(String port)
         {
@@ -57,9 +56,7 @@ namespace flint
             serialPort.ErrorReceived += serialPort_ErrorReceived; 
         }
 
-        /// <summary>
-        /// Connect to the Pebble.
-        /// </summary>
+        /// <summary> Connect to the Pebble. </summary>
         /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
         public void Connect()
         {

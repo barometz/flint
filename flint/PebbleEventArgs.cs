@@ -5,8 +5,8 @@ using System.Text;
 
 namespace flint
 {
-    /// <summary>
-    /// Event args for any Pebble message, containing an endpoint and the payload in bytes.
+    /// <summary> Event args for any Pebble message, containing an endpoint and 
+    /// the payload in bytes.
     /// </summary>
     public class MessageReceivedEventArgs : EventArgs
     {
@@ -20,17 +20,14 @@ namespace flint
         }
     }
 
-    /// <summary>
-    /// Received a PING response.
-    /// </summary>
+    /// <summary> Event args for a PING response. </summary>
     public class PingReceivedEventArgs : EventArgs
     {
         public UInt32 Cookie { get; private set; }
 
-        /// <summary>
-        /// Create new eventargs for a PING.
-        /// </summary>
-        /// <param name="payload">The payload. Has to be five bytes long, otherwise something's wrong.</param>
+        /// <summary> Create new eventargs for a PING. </summary>
+        /// <param name="payload">The payload. Has to be five bytes long, 
+        /// otherwise something's wrong.</param>
         public PingReceivedEventArgs(byte[] payload)
         {
             if (payload.Length != 5)
@@ -42,9 +39,7 @@ namespace flint
         }
     }
 
-    /// <summary>
-    /// Event args for a LOGS message.
-    /// </summary>
+    /// <summary> Event args for a LOGS message. </summary>
     public class LogReceivedEventArgs : EventArgs
     {
         public UInt32 Timestamp { get; private set; }
@@ -97,12 +92,15 @@ namespace flint
         }
     }
 
+    /// <summary> Event args for a media control event (play/pause, forward, 
+    /// previous). 
+    /// </summary>
     public class MediaControlReceivedEventArgs : EventArgs
     {
         public Pebble.MediaControls Command { get; private set; }
 
-        /// <summary>
-        /// Create a new media control event.  The payload should be 1 byte long.
+        /// <summary> Create a new media control event.  The payload should be 
+        /// 1 byte long.
         /// </summary>
         /// <param name="payload"></param>
         public MediaControlReceivedEventArgs(byte[] payload)

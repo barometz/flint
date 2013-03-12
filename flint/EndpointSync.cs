@@ -3,9 +3,8 @@ using System.Threading;
 
 namespace flint
 {
-    /// <summary>
-    /// Provides an "immediate" return value for requests that would otherwise
-    /// be answered through an event.
+    /// <summary> Provides an "immediate" return value for requests 
+    /// that would otherwise be answered through an event.
     /// </summary>
     /// <remarks>
     /// Seems like there should be a tidier way using System.Threading, but I
@@ -19,9 +18,8 @@ namespace flint
         Pebble.Endpoints endpoint;
 
         public byte[] Result { get; private set; }
-
         public Boolean Triggered { get; private set; }
-        
+
         public EndpointSync(Pebble pebble, Pebble.Endpoints endpoint)
         {
             this.pebble = pebble;
@@ -30,8 +28,7 @@ namespace flint
             pebble.RegisterEndpointCallback(endpoint, trigger);
         }
 
-        /// <summary> Block until the request has returned. 
-        /// </summary>
+        /// <summary> Block until the request has returned. </summary>
         /// <param name="delay">The minimum delay between checks in milliseconds.</param>
         /// <param name="timeout">The time to wait until giving up entirely, at 
         /// which point a TimeoutException is raised.</param>
@@ -39,7 +36,7 @@ namespace flint
         public byte[] WaitAndReturn(int delay = 15, int timeout = 1000)
         {
             DateTime start = DateTime.Now;
-            while (!this.Triggered) 
+            while (!this.Triggered)
             {
                 if ((DateTime.Now - start).TotalMilliseconds > timeout)
                 {
@@ -56,7 +53,5 @@ namespace flint
             Result = e.Message;
             Triggered = true;
         }
-
-        
     }
 }

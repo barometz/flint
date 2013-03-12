@@ -3,8 +3,7 @@ using flint;
 
 namespace flint_test
 {
-    /// <summary>
-    /// Demonstrates and tests the functionality of the Flint library.
+    /// <summary> Demonstrates and tests the functionality of the Flint library.
     /// </summary>
     class Program
     {
@@ -21,7 +20,7 @@ namespace flint_test
             // Subscribe to an event for a particular endpoint
             pebble.RegisterEndpointCallback(Pebble.Endpoints.PING, pingReceived);
 
-            Console.WriteLine("Hi! Welcome to Flint.  Press hit enter to try a ping.");
+            Console.WriteLine("Hi! Welcome to Flint.  Press enter to try a ping.");
             Console.ReadLine();
             try
             {
