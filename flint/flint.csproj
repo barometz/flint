@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="EndpointSync.cs" />
     <Compile Include="Pebble.cs" />
+    <Compile Include="PebbleEventArgs.cs" />
     <Compile Include="PebbleProtocol.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

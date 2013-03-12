@@ -19,11 +19,14 @@ namespace flint
         }
     }
     
-    /// <summary> Handles the basic protocol structure for Pebble communication, 
-    /// turning the input stream into events for the various endpoints.
+    /// <summary> Handles the basic protocol structure for Pebble communication.
+    /// Essentially handles the SerialPort and translates the stream to 
+    /// endpoint,payload pairs and vv.  Does and should not handle anything 
+    /// regarding the *meaning* of that data.
     /// </summary>
     internal class PebbleProtocol
     {
+        // TODO: Exception handling
         public event EventHandler<RawMessageReceivedEventArgs> RawMessageReceived;
         public event SerialErrorReceivedEventHandler SerialErrorReceived;
 
@@ -43,32 +46,33 @@ namespace flint
         /// <summary> Create a new Pebble connection
         /// </summary>
         /// <param name="port"></param>
+        /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
         public PebbleProtocol(String port)
         {
             this.Port = port;
             this.serialPort = new SerialPort(port, 19200);
             this.serialPort.ReadTimeout = 500;
             this.serialPort.WriteTimeout = 500;
-
-            byte[] discard = new byte[5];
-            serialPort.Read(discard, 0, 5);
+            serialPort.Open();
+            // Discard some noise.
+            serialPort.ReadExisting();
 
             serialPort.DataReceived += serialPort_DataReceived;
             serialPort.ErrorReceived += serialPort_ErrorReceived;
         }
 
         /// <summary> Send a message to the connected Pebble.  
-        /// The payload should at most be 4096 bytes large.
+        /// The payload should at most be 2048 bytes large.
         /// </summary>
         /// <param name="endpoint"></param>
         /// <param name="payload"></param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the payload is too large.</exception>
         public void sendMessage(UInt16 endpoint, byte[] payload)
         {
-            if (payload.Length > 4096)
+            if (payload.Length > 2048)
             {
                 throw new ArgumentOutOfRangeException("payload", 
-                    "The payload should not be more than 4096 bytes");
+                    "The payload should not be more than 2048 bytes");
             }
 
             UInt16 length = Convert.ToUInt16(payload.Length);
@@ -79,6 +83,12 @@ namespace flint
                 Array.Reverse(payloadSize);
                 Array.Reverse(_endpoint);
             }
+#if DEBUG
+            Console.WriteLine("Sending message..");
+            Console.WriteLine("\tPLS: " + BitConverter.ToString(payloadSize));
+            Console.WriteLine("\tEP:  " + BitConverter.ToString(_endpoint));
+            Console.WriteLine("\tPL:  " + BitConverter.ToString(payload));
+#endif
             serialPort.Write(payloadSize, 0, 2);
             serialPort.Write(_endpoint, 0, 2);
             serialPort.Write(payload, 0, length);
@@ -147,6 +157,11 @@ namespace flint
                         }
                         currentPayloadSize = BitConverter.ToUInt16(payloadSize, 0);
                         currentEndpoint = BitConverter.ToUInt16(endpoint, 0);
+#if DEBUG
+                        Console.WriteLine("Message metadata received:");
+                        Console.WriteLine("\tPLS: " + currentPayloadSize.ToString());
+                        Console.WriteLine("\tEP:  " + currentEndpoint.ToString());
+#endif
                         waitingState = waitingStates.Payload;
                         return true;
                     }
@@ -166,7 +181,7 @@ namespace flint
                     }
                     break;
             }
-            // If it hasn't returned yet there wasn't anything interesting to
+            // If this hasn't returned yet there wasn't anything interesting to
             // read.
             return false;
         }

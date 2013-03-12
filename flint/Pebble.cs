@@ -1,26 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace flint
 {
-    public class MessageReceivedEventArgs : EventArgs
-    {
-        public Pebble.Endpoints Endpoint { get; private set; }
-        public byte[] Message { get; private set; }
-
-        public MessageReceivedEventArgs(Pebble.Endpoints endpoint, byte[] message)
-        {
-            Endpoint = endpoint;
-            Message = message;
-        }
-    }
-
     /// <summary>
     /// Represents a (connection to a) Pebble.
     /// </summary>
     public class Pebble
     {
-        
+        // TODO: Autodetecting Pebbles, either by prodding all serial devices or through WMI
+        //       (http://msdn.microsoft.com/en-us/library/aa394587%28v=vs.85%29.aspx)
+        // TODO: Exception handling.
+
         public enum Endpoints : ushort
         {
             FIRMWARE = 1,
@@ -45,6 +37,8 @@ namespace flint
         }
 
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+        public event EventHandler<LogReceivedEventArgs> LogReceived;
+        public event EventHandler<PingReceivedEventArgs> PingReceived;
 
         /// <summary>
         /// Holds callbacks for the separate endpoints.  Saves a lot of typing.
@@ -58,6 +52,7 @@ namespace flint
         {
             pebbleProt = new PebbleProtocol(port);
             pebbleProt.RawMessageReceived += pebbleProt_RawMessageReceived;
+            
             endpointEvents = new Dictionary<Endpoints,List<EventHandler<MessageReceivedEventArgs>>>();
         }
 
@@ -91,39 +86,53 @@ namespace flint
             }
         }
 
-        /// <summary> Send the Pebble a ping.  
-        /// </summary>
+        /// <summary> Send the Pebble a ping. </summary>
         /// <param name="cookie"></param>
         /// <param name="async">If set to true, the method returns immediately 
         /// and you'll have to keep an eye on the relevant event.  Otherwise 
         /// it'll wait until there's a reply or timeout.  The latter will throw
         /// a TimeoutException.</param>
-        public void Ping(int cookie = 0, Boolean async = false)
+        public void Ping(UInt32 cookie = 0, Boolean async = false)
         {
-            byte[] _cookie = BitConverter.GetBytes(cookie);
-            if (BitConverter.IsLittleEndian) 
-            {
-                Array.Reverse(_cookie);
-            }
+            byte[] _cookie = new byte[5];
+            // No need to worry about endianness as it's sent back byte for byte anyway.  
+            Array.Copy(BitConverter.GetBytes(cookie), 0, _cookie, 1, 4);
 
             pebbleProt.sendMessage((UInt16)Endpoints.PING, _cookie);
             if (!async)
             {
                 var wait = new EndpointSync(this, Endpoints.PING);
-                wait.WaitAndReturn();
+                wait.WaitAndReturn(timeout: 5000);
             }
         }
 
         void pebbleProt_RawMessageReceived(object sender, RawMessageReceivedEventArgs e)
         {
             Endpoints endpoint = (Endpoints)e.Endpoint;
-            EventHandler<MessageReceivedEventArgs> handler;
+            // Switch for the specific events
+            switch (endpoint)
+            {
+                case Endpoints.LOGS:
+                    EventHandler<LogReceivedEventArgs> loghandler = LogReceived;
+                    if (loghandler != null)
+                    {
+                        loghandler(this, new LogReceivedEventArgs(e.Payload));
+                    }
+                    break;
+                case Endpoints.PING:
+                    EventHandler<PingReceivedEventArgs> pinghandler = PingReceived;
+                    if (pinghandler != null)
+                    {
+                        pinghandler(this, new PingReceivedEventArgs(e.Payload));
+                    }
+                    break;
+            }
 
             // Catchall:
-            handler = MessageReceived;
-            if (handler != null)
+            EventHandler<MessageReceivedEventArgs> allhandler = MessageReceived;
+            if (allhandler != null)
             {
-                handler(this, new MessageReceivedEventArgs(endpoint, e.Payload));
+                allhandler(this, new MessageReceivedEventArgs(endpoint, e.Payload));
             }
 
             // Endpoint-specific
