@@ -36,6 +36,39 @@ namespace flint
             MAX_ENDPOINT = 65535
         }
 
+        /* Capabilities information gratefully taken from 
+         * https://github.com/bldewolf/libpebble/commit/ca3c335aef3bdb5914b1b4fcd63701baea9de848
+         */
+
+        public enum SessionCaps : uint
+        {
+            GAMMA_RAY = 0x80000000
+        }
+
+        [Flags]
+        public enum RemoteCaps : uint
+        {
+            UNKNOWN = 0,
+            IOS = 1,
+            ANDROID = 2,
+            OSX = 3,
+            LINUX = 4,
+            WINDOWS = 5,
+            TELEPHONY = 16,
+            SMS = 32,
+            GPS = 64,
+            BTLE = 128,
+            // 240? No, that doesn't make sense.  But it's apparently true.
+            CAMERA_FRONT = 240,
+            CAMERA_REAR = 256,
+            ACCEL = 512,
+            GYRO = 1024,
+            COMPASS = 2048
+        }
+
+        uint sessionCaps;
+        uint remoteCaps;
+
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<LogReceivedEventArgs> LogReceived;
         public event EventHandler<PingReceivedEventArgs> PingReceived;
@@ -48,12 +81,32 @@ namespace flint
 
         PebbleProtocol pebbleProt;
 
-        public Pebble(String port)
+        public Pebble(String port, uint? session_cap=null, uint? remote_caps=null)
         {
             pebbleProt = new PebbleProtocol(port);
             pebbleProt.RawMessageReceived += pebbleProt_RawMessageReceived;
 
             endpointEvents = new Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>>();
+            RegisterEndpointCallback(Endpoints.PHONE_VERSION, PhoneVersionReceived);
+
+            if (session_cap == null)
+            {
+                sessionCaps = (uint)SessionCaps.GAMMA_RAY;
+            }
+            else
+            {
+                sessionCaps = (uint)session_cap;
+            }
+
+            if (remote_caps == null)
+            {
+                remoteCaps = (uint)(RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID);
+            }
+            else
+            {
+                remoteCaps = (uint)remote_caps;
+            }
+            pebbleProt.Connect();
         }
 
         /// <summary> Subscribe to the event of a particular endpoint message 
@@ -145,7 +198,23 @@ namespace flint
                     h(this, new MessageReceivedEventArgs(endpoint, e.Payload));
                 }
             }
+        }
 
+        void PhoneVersionReceived(object sender, MessageReceivedEventArgs e)
+        {
+            byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
+            byte[] session = BitConverter.GetBytes(sessionCaps);
+            byte[] remote = BitConverter.GetBytes(remoteCaps);
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(session);
+                Array.Reverse(remote);
+            }
+            byte[] msg = new byte[prefix.Length + session.Length + remote.Length];
+            Array.Copy(prefix, msg, prefix.Length);
+            Array.Copy(session, 0, msg, prefix.Length, session.Length);
+            Array.Copy(remote, 0, msg, prefix.Length + session.Length, remote.Length);
+            pebbleProt.sendMessage((ushort)Endpoints.PHONE_VERSION, msg);
         }
     }
 }

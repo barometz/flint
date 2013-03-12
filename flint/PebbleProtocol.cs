@@ -46,19 +46,25 @@ namespace flint
         /// <summary> Create a new Pebble connection
         /// </summary>
         /// <param name="port"></param>
-        /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
+        /// 
         public PebbleProtocol(String port)
         {
             this.Port = port;
             this.serialPort = new SerialPort(port, 19200);
             this.serialPort.ReadTimeout = 500;
             this.serialPort.WriteTimeout = 500;
-            serialPort.Open();
-            // Discard some noise.
-            serialPort.ReadExisting();
 
             serialPort.DataReceived += serialPort_DataReceived;
-            serialPort.ErrorReceived += serialPort_ErrorReceived;
+            serialPort.ErrorReceived += serialPort_ErrorReceived; 
+        }
+
+        /// <summary>
+        /// Connect to the Pebble.
+        /// </summary>
+        /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
+        public void Connect()
+        {
+            serialPort.Open(); 
         }
 
         /// <summary> Send a message to the connected Pebble.  
