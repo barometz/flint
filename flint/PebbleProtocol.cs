@@ -46,7 +46,6 @@ namespace flint
         /// <summary> Create a new Pebble connection
         /// </summary>
         /// <param name="port"></param>
-        /// 
         public PebbleProtocol(String port)
         {
             this.Port = port;

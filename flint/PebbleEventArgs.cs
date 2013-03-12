@@ -96,4 +96,18 @@ namespace flint
             return string.Format(template, Timestamp, Level, Filename, LineNo, Message);
         }
     }
+
+    public class MediaControlReceivedEventArgs : EventArgs
+    {
+        public Pebble.MediaControls Command { get; private set; }
+
+        /// <summary>
+        /// Create a new media control event.  The payload should be 1 byte long.
+        /// </summary>
+        /// <param name="payload"></param>
+        public MediaControlReceivedEventArgs(byte[] payload)
+        {
+            Command = (Pebble.MediaControls)payload[0];
+        }
+    }
 }

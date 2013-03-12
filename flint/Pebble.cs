@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace flint
 {
     /// <summary>
-    /// Represents a (connection to a) Pebble.
+    /// Represents a (connection to a) Pebble.  PebbleProtocol is blissfully 
+    /// unaware of the *meaning* of anything, all that is handled here.
     /// </summary>
     public class Pebble
     {
@@ -34,6 +36,15 @@ namespace flint
             RUNKEEPER = 7000,
             PUT_BYTES = 48879,
             MAX_ENDPOINT = 65535
+        }
+
+        public enum MediaControls
+        {
+            PlayPause = 1,
+            Forward = 4,
+            Previous = 5,
+            // PlayPause also sends 8 for some reason.  To be figured out.
+            Other = 8
         }
 
         /* Capabilities information gratefully taken from 
@@ -72,6 +83,7 @@ namespace flint
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<LogReceivedEventArgs> LogReceived;
         public event EventHandler<PingReceivedEventArgs> PingReceived;
+        public event EventHandler<MediaControlReceivedEventArgs> MediaControlReceived;
 
         /// <summary>
         /// Holds callbacks for the separate endpoints.  Saves a lot of typing.
@@ -140,6 +152,8 @@ namespace flint
             }
         }
 
+        /** Pebble actions **/
+
         /// <summary> Send the Pebble a ping. </summary>
         /// <param name="cookie"></param>
         /// <param name="async">If set to true, the method returns immediately 
@@ -160,6 +174,34 @@ namespace flint
             }
         }
 
+        /// <summary>
+        /// Send "Now playing.." metadata to the Pebble.  The track, album and 
+        /// artist should each not be longer than 256 bytes.
+        /// </summary>
+        /// <param name="track"></param>
+        /// <param name="album"></param>
+        /// <param name="artist"></param>
+        public void NowPlaying(String artist, String album, String track)
+        {
+            // No idea what this does.  Do it anyway.
+            byte[] data = { 16 };
+
+            byte[] _artist = Encoding.UTF8.GetBytes(artist);
+            byte[] _album = Encoding.UTF8.GetBytes(album);
+            byte[] _track = Encoding.UTF8.GetBytes(track);
+            byte[] artistlen = { (byte)_artist.Length };
+            byte[] albumlen = { (byte)_album.Length };
+            byte[] tracklen = { (byte)_track.Length };
+
+            data = data.Concat(artistlen).Concat(_artist).ToArray();
+            data = data.Concat(albumlen).Concat(_album).ToArray();
+            data = data.Concat(tracklen).Concat(_track).ToArray();
+
+            pebbleProt.sendMessage((UInt16)Endpoints.MUSIC_CONTROL, data);
+        }
+
+        /** Pebble message event handlers **/
+
         void pebbleProt_RawMessageReceived(object sender, RawMessageReceivedEventArgs e)
         {
             Endpoints endpoint = (Endpoints)e.Endpoint;
@@ -178,6 +220,13 @@ namespace flint
                     if (pinghandler != null)
                     {
                         pinghandler(this, new PingReceivedEventArgs(e.Payload));
+                    }
+                    break;
+                case Endpoints.MUSIC_CONTROL:
+                    EventHandler<MediaControlReceivedEventArgs> mediahandler = MediaControlReceived;
+                    if (mediahandler != null)
+                    {
+                        mediahandler(this, new MediaControlReceivedEventArgs(e.Payload));
                     }
                     break;
             }
