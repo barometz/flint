@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management;
 using System.Text;
+using InTheHand.Net.Sockets;
 
 namespace flint
 {
@@ -92,8 +94,11 @@ namespace flint
         uint sessionCaps;
         uint remoteCaps;
 
+        public string _port;
+
         public Pebble(String port, uint? session_cap=null, uint? remote_caps=null)
         {
+            _port = port;
             pebbleProt = new PebbleProtocol(port);
             pebbleProt.RawMessageReceived += pebbleProt_RawMessageReceived;
 
@@ -117,8 +122,47 @@ namespace flint
             {
                 remoteCaps = (uint)remote_caps;
             }
+        }
+
+        public void Connect()
+        {
             pebbleProt.Connect();
         }
+
+        /// <summary>
+        /// Detect all Pebbles that have been paired with this system.
+        /// </summary>
+        /// <returns></returns>
+        public static List<Pebble> DetectPebbles()
+        {
+            BluetoothClient client = new BluetoothClient();
+            
+            var btlist =
+                from bdi in client.DiscoverDevices(20, true, false, false)
+                where bdi.DeviceName.StartsWith("Pebble ")
+                select bdi;
+            
+            var objlist = (new ManagementObjectSearcher("SELECT * FROM Win32_SerialPort")).Get();
+            ManagementObject[] portlist = new ManagementObject[objlist.Count];
+            objlist.CopyTo(portlist, 0);
+
+            List<Pebble> zut = new List<Pebble>();
+
+            foreach (var bdi in btlist) 
+            {
+                foreach (var port in portlist) 
+                {
+                    if ((port["PNPDeviceID"] as String).Contains(bdi.DeviceAddress.ToString()))
+                    {
+                        zut.Add(new Pebble(port["DeviceID"] as String));
+                    }
+                }
+            }
+
+            return zut;
+
+        }
+
 
         /// <summary> Subscribe to the event of a particular endpoint message 
         /// being received.  This enables subscribing to any endpoint, 
