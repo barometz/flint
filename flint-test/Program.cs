@@ -9,15 +9,9 @@ namespace flint_test
     {
         static void Main(string[] args)
         {
-
-            Console.WriteLine("Listing Pebbles:");
-            foreach (Pebble peb in Pebble.DetectPebbles())
-            {
-                Console.WriteLine(peb.Port);
-            }
-
             Pebble pebble = Pebble.GetPebble();
             pebble.Connect();
+            Console.WriteLine(pebble);
             pebble.MessageReceived += pebble_MessageReceived;
 
             // Subscribe to specific events

@@ -86,7 +86,11 @@ namespace flint
         /// </summary>
         Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>> endpointEvents;
 
+        /// <summary> The four-char ID for the Pebble, based on its BT address. 
+        /// </summary>
         public String PebbleID { get; private set; }
+        /// <summary> The serial port the Pebble is on. 
+        /// </summary>
         public String Port
         {
             get
@@ -96,10 +100,15 @@ namespace flint
         }
 
         PebbleProtocol pebbleProt;
-        uint sessionCaps;
-        uint remoteCaps;
+        uint sessionCaps = (uint)SessionCaps.GAMMA_RAY;
+        uint remoteCaps = (uint)(RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID);
 
-        public Pebble(String port, String pebbleid, uint? session_cap = null, uint? remote_caps = null)
+        /// <summary> Create a new Pebble 
+        /// </summary>
+        /// <param name="port">The serial port to connect to.</param>
+        /// <param name="pebbleid">The four-character Pebble ID, based on its BT address.  
+        /// Nothing explodes when it's incorrect, it's merely used for identification.</param>
+        public Pebble(String port, String pebbleid)
         {
             PebbleID = pebbleid;
             pebbleProt = new PebbleProtocol(port);
@@ -107,24 +116,6 @@ namespace flint
 
             endpointEvents = new Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>>();
             RegisterEndpointCallback(Endpoints.PHONE_VERSION, PhoneVersionReceived);
-
-            if (session_cap == null)
-            {
-                sessionCaps = (uint)SessionCaps.GAMMA_RAY;
-            }
-            else
-            {
-                sessionCaps = (uint)session_cap;
-            }
-
-            if (remote_caps == null)
-            {
-                remoteCaps = (uint)(RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID);
-            }
-            else
-            {
-                remoteCaps = (uint)remote_caps;
-            }
         }
 
         /// <summary> Returns one of the paired Pebbles, or a specific one 
@@ -138,34 +129,33 @@ namespace flint
         public static Pebble GetPebble(String pebbleid = null)
         {
             List<Pebble> peblist = DetectPebbles();
-            
-            if (peblist.Count == 0) 
+
+            if (peblist.Count == 0)
             {
                 throw new PebbleNotFoundException("No paired Pebble found.");
             }
 
-            if (pebbleid == null) 
+            if (pebbleid == null)
             {
                 return peblist[0];
-            } 
-            else 
+            }
+            else
             {
                 Pebble ret = peblist.FirstOrDefault((peb) => peb.PebbleID == pebbleid);
-                if (ret == null) 
+                if (ret == null)
                 {
                     throw new PebbleNotFoundException(pebbleid);
-                } 
-                else 
+                }
+                else
                 {
-                    return ret;                    
+                    return ret;
                 }
             }
         }
 
-        /// <summary>
-        /// Detect all Pebbles that have been paired with this system.
-        /// Takes a little while because apparently listing all available 
-        /// serial ports does.
+        /// <summary> Detect all Pebbles that have been paired with this system.
+        /// Takes a little while because apparently listing all available serial 
+        /// ports does.
         /// </summary>
         /// <returns></returns>
         public static List<Pebble> DetectPebbles()
@@ -191,7 +181,7 @@ namespace flint
                 {
                     if ((port["PNPDeviceID"] as String).Contains(bdi.DeviceAddress.ToString()))
                     {
-                        peblist.Add(new Pebble(port["DeviceID"] as String, bdi.DeviceName.Substring(6)));
+                        peblist.Add(new Pebble(port["DeviceID"] as String, bdi.DeviceName.Substring(7)));
                     }
                 }
             }
@@ -199,6 +189,27 @@ namespace flint
             return peblist;
         }
 
+        /// <summary> Set the capabilities you want to tell the Pebble about.  
+        /// Should be called before connecting.
+        /// </summary>
+        /// <param name="session_cap"></param>
+        /// <param name="remote_caps"></param>
+        public void SetCaps(uint? session_cap = null, uint? remote_caps = null)
+        {
+            if (session_cap != null)
+            {
+                sessionCaps = (uint)session_cap;
+            }
+
+            if (remote_caps != null)
+            {
+                remoteCaps = (uint)remote_caps;
+            }
+        }
+
+        /// <summary> Connect with the Pebble. 
+        /// </summary>
+        /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
         public void Connect()
         {
             pebbleProt.Connect();
@@ -237,7 +248,8 @@ namespace flint
 
         /** Pebble actions **/
 
-        /// <summary> Send the Pebble a ping. </summary>
+        /// <summary> Send the Pebble a ping. 
+        /// </summary>
         /// <param name="cookie"></param>
         /// <param name="async">If set to true, the method returns immediately 
         /// and you'll have to keep an eye on the relevant event.  Otherwise 
@@ -345,6 +357,11 @@ namespace flint
             byte[] msg = new byte[0];
             msg = msg.Concat(prefix).Concat(session).Concat(remote).ToArray();
             pebbleProt.sendMessage((ushort)Endpoints.PHONE_VERSION, msg);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("Pebble {0} on {1}", PebbleID, Port);
         }
     }
 }

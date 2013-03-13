@@ -18,7 +18,7 @@ namespace flint
             this.Payload = payload;
         }
     }
-    
+
     /// <summary> Handles the basic protocol structure for Pebble communication.
     /// Essentially handles the SerialPort and translates the stream to 
     /// endpoint,payload pairs and vv.  Does and should not handle anything 
@@ -53,14 +53,14 @@ namespace flint
             this.serialPort.WriteTimeout = 500;
 
             serialPort.DataReceived += serialPort_DataReceived;
-            serialPort.ErrorReceived += serialPort_ErrorReceived; 
+            serialPort.ErrorReceived += serialPort_ErrorReceived;
         }
 
         /// <summary> Connect to the Pebble. </summary>
         /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
         public void Connect()
         {
-            serialPort.Open(); 
+            serialPort.Open();
         }
 
         /// <summary> Send a message to the connected Pebble.  
@@ -73,7 +73,7 @@ namespace flint
         {
             if (payload.Length > 2048)
             {
-                throw new ArgumentOutOfRangeException("payload", 
+                throw new ArgumentOutOfRangeException("payload",
                     "The payload should not be more than 2048 bytes");
             }
 
@@ -99,7 +99,7 @@ namespace flint
         void RaiseRawMessageReceived(UInt16 endpoint, byte[] payload)
         {
             var temp = RawMessageReceived;
-            if (temp != null) 
+            if (temp != null)
             {
                 temp(this, new RawMessageReceivedEventArgs(endpoint, payload));
             }
@@ -125,7 +125,8 @@ namespace flint
         void serialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             // Keep reading until there's no complete chunk to be read.
-            while (readAndProcess()) {
+            while (readAndProcess())
+            {
             }
         }
 
@@ -139,19 +140,19 @@ namespace flint
         /// <returns>
         /// True if there was enough data to read, otherwise false.
         /// </returns>
-        bool readAndProcess() 
+        bool readAndProcess()
         {
             byte[] endpoint = new byte[2];
             byte[] payloadSize = new byte[2];
-            switch (waitingState) 
+            switch (waitingState)
             {
                 case waitingStates.NewMessage:
-                    if (serialPort.BytesToRead >= 4) 
+                    if (serialPort.BytesToRead >= 4)
                     {
                         // Read new payload size and endpoint
                         serialPort.Read(payloadSize, 0, 2);
                         serialPort.Read(endpoint, 0, 2);
-                        if (BitConverter.IsLittleEndian) 
+                        if (BitConverter.IsLittleEndian)
                         {
                             // Data is transmitted big-endian, so flip.
                             Array.Reverse(payloadSize);
@@ -169,7 +170,7 @@ namespace flint
                     }
                     break;
                 case waitingStates.Payload:
-                    if (serialPort.BytesToRead >= currentPayloadSize) 
+                    if (serialPort.BytesToRead >= currentPayloadSize)
                     {
                         // All of the payload's been received, so read it.
                         byte[] buffer = new byte[currentPayloadSize];
