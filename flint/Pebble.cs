@@ -294,6 +294,14 @@ namespace flint
             pebbleProt.sendMessage((UInt16)Endpoints.MUSIC_CONTROL, data);
         }
 
+        /// <summary> Send a malformed ping (to trigger a LOGS response)
+        /// </summary>
+        public void BadPing()
+        {
+            byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
+            pebbleProt.sendMessage((UInt16)Endpoints.PING, cookie);
+        }
+
         /** Pebble message event handlers **/
 
         void pebbleProt_RawMessageReceived(object sender, RawMessageReceivedEventArgs e)

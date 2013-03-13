@@ -40,7 +40,7 @@ namespace flint
     /// <summary> Event args for a LOGS message. </summary>
     public class LogReceivedEventArgs : EventArgs
     {
-        public UInt32 Timestamp { get; private set; }
+        public DateTime Timestamp { get; private set; }
         public byte Level { get; private set; }
         public Int16 LineNo { get; private set; }
         public String Filename { get; private set; }
@@ -52,23 +52,23 @@ namespace flint
             byte msgsize;
             Array.Copy(payload, metadata, 8);
             /* 
-                * Unpack the metadata.  Eight bytes:
-                * 0..3 -> integer timestamp
-                * 4    -> Message level (severity)
-                * 5    -> Size of the message
-                * 6..7 -> Line number (?)
-                */
+             * Unpack the metadata.  Eight bytes:
+             * 0..3 -> integer timestamp
+             * 4    -> Message level (severity)
+             * 5    -> Size of the message
+             * 6..7 -> Line number (?)
+             */
             if (BitConverter.IsLittleEndian)
             {
                 Array.Reverse(metadata);
-                Timestamp = BitConverter.ToUInt32(metadata, 4);
+                Timestamp = timestampToDT(BitConverter.ToInt32(metadata, 4));
                 Level = metadata[3];
                 msgsize = metadata[2];
                 LineNo = BitConverter.ToInt16(metadata, 0);
             }
             else
             {
-                Timestamp = BitConverter.ToUInt32(metadata, 0);
+                Timestamp = timestampToDT(BitConverter.ToInt32(metadata, 0));
                 Level = metadata[4];
                 msgsize = metadata[5];
                 LineNo = BitConverter.ToInt16(metadata, 6);
@@ -81,6 +81,20 @@ namespace flint
 
             Filename = Encoding.UTF8.GetString(_filename);
             Message = Encoding.UTF8.GetString(_data);
+        }
+
+        /// <summary> Convert a Unix timestamp to a DateTime object.
+        /// </summary>
+        /// <remarks>
+        /// This has some issues, as Pebble isn't timezone-aware and it's 
+        /// unclear how either side deals with leap seconds.  For basic usage
+        /// this should be plenty, though.
+        /// </remarks>
+        /// <param name="ts"></param>
+        /// <returns></returns>
+        static DateTime timestampToDT(Int32 ts)
+        {
+            return new DateTime(1970, 1, 1).AddSeconds(ts);
         }
 
         public override string ToString()

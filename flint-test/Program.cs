@@ -10,7 +10,16 @@ namespace flint_test
         static void Main(string[] args)
         {
             Pebble pebble = Pebble.GetPebble();
-            pebble.Connect();
+            try
+            {
+                pebble.Connect();
+            }
+            catch (System.IO.IOException)
+            {
+                Console.WriteLine("Timeout while connecting.  Press enter to exit.");
+                Console.ReadLine();
+                return;
+            }
             Console.WriteLine(pebble);
             pebble.MessageReceived += pebble_MessageReceived;
 
@@ -32,6 +41,10 @@ namespace flint_test
             {
                 Console.WriteLine("Timeout :(");
             }
+
+            Console.WriteLine("Bad ping to trigger log..");
+            Console.ReadLine();
+            pebble.BadPing();
 
             Console.WriteLine("Now playing test.  Hit enter and check the music app.");
             Console.ReadLine();
