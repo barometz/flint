@@ -13,8 +13,6 @@ namespace flint
     /// </summary>
     public class Pebble
     {
-        // TODO: Autodetecting Pebbles, either by prodding all serial devices or through WMI
-        //       (http://msdn.microsoft.com/en-us/library/aa394587%28v=vs.85%29.aspx)
         // TODO: Exception handling.
 
         public enum Endpoints : ushort
@@ -79,8 +77,6 @@ namespace flint
             COMPASS = 2048
         }
 
-        
-
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<LogReceivedEventArgs> LogReceived;
         public event EventHandler<PingReceivedEventArgs> PingReceived;
@@ -89,16 +85,23 @@ namespace flint
         /// Saves a lot of typing. There's probably a good reason not to do this.
         /// </summary>
         Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>> endpointEvents;
-        
+
+        public String PebbleID { get; private set; }
+        public String Port
+        {
+            get
+            {
+                return pebbleProt.Port;
+            }
+        }
+
         PebbleProtocol pebbleProt;
         uint sessionCaps;
         uint remoteCaps;
 
-        public string _port;
-
-        public Pebble(String port, uint? session_cap=null, uint? remote_caps=null)
+        public Pebble(String port, String pebbleid, uint? session_cap = null, uint? remote_caps = null)
         {
-            _port = port;
+            PebbleID = pebbleid;
             pebbleProt = new PebbleProtocol(port);
             pebbleProt.RawMessageReceived += pebbleProt_RawMessageReceived;
 
@@ -124,45 +127,82 @@ namespace flint
             }
         }
 
-        public void Connect()
+        /// <summary> Returns one of the paired Pebbles, or a specific one 
+        /// when a four-character ID is provided.  Convenience function for 
+        /// when you know there's only one, mostly.
+        /// </summary>
+        /// <param name="pebbleid"></param>
+        /// <returns></returns>
+        /// <exception cref="pebble.PebbleNotFoundException">When no Pebble or no Pebble of the 
+        /// specified id was found.</exception>
+        public static Pebble GetPebble(String pebbleid = null)
         {
-            pebbleProt.Connect();
+            List<Pebble> peblist = DetectPebbles();
+            
+            if (peblist.Count == 0) 
+            {
+                throw new PebbleNotFoundException("No paired Pebble found.");
+            }
+
+            if (pebbleid == null) 
+            {
+                return peblist[0];
+            } 
+            else 
+            {
+                Pebble ret = peblist.FirstOrDefault((peb) => peb.PebbleID == pebbleid);
+                if (ret == null) 
+                {
+                    throw new PebbleNotFoundException(pebbleid);
+                } 
+                else 
+                {
+                    return ret;                    
+                }
+            }
         }
 
         /// <summary>
         /// Detect all Pebbles that have been paired with this system.
+        /// Takes a little while because apparently listing all available 
+        /// serial ports does.
         /// </summary>
         /// <returns></returns>
         public static List<Pebble> DetectPebbles()
         {
-            BluetoothClient client = new BluetoothClient();
-            
-            var btlist =
-                from bdi in client.DiscoverDevices(20, true, false, false)
-                where bdi.DeviceName.StartsWith("Pebble ")
-                select bdi;
-            
-            var objlist = (new ManagementObjectSearcher("SELECT * FROM Win32_SerialPort")).Get();
-            ManagementObject[] portlist = new ManagementObject[objlist.Count];
-            objlist.CopyTo(portlist, 0);
+            var client = new BluetoothClient();
+            // A list of all BT devices that are paired, in range, and named "Pebble *" 
+            var btlist = client.DiscoverDevices(20, true, false, false).
+                Where((bdi) => bdi.DeviceName.StartsWith("Pebble "));
 
-            List<Pebble> zut = new List<Pebble>();
+            // A list of all available serial ports with some metadata including the PnP device ID,
+            // which in turn contains a BT device address we can search for.
+            var _portlist = (new ManagementObjectSearcher("SELECT * FROM Win32_SerialPort")).Get();
+            var portlist = new ManagementObject[_portlist.Count];
+            _portlist.CopyTo(portlist, 0);
 
-            foreach (var bdi in btlist) 
+            var peblist = new List<Pebble>();
+
+            // Match bluetooth devices and serial ports, then create Pebbles out of them.
+            // Seems like a LINQ join should do this much more cleanly. 
+            foreach (BluetoothDeviceInfo bdi in btlist)
             {
-                foreach (var port in portlist) 
+                foreach (ManagementObject port in portlist)
                 {
                     if ((port["PNPDeviceID"] as String).Contains(bdi.DeviceAddress.ToString()))
                     {
-                        zut.Add(new Pebble(port["DeviceID"] as String));
+                        peblist.Add(new Pebble(port["DeviceID"] as String, bdi.DeviceName.Substring(6)));
                     }
                 }
             }
 
-            return zut;
-
+            return peblist;
         }
 
+        public void Connect()
+        {
+            pebbleProt.Connect();
+        }
 
         /// <summary> Subscribe to the event of a particular endpoint message 
         /// being received.  This enables subscribing to any endpoint, 

@@ -13,10 +13,10 @@ namespace flint_test
             Console.WriteLine("Listing Pebbles:");
             foreach (Pebble peb in Pebble.DetectPebbles())
             {
-                Console.WriteLine(peb._port);
+                Console.WriteLine(peb.Port);
             }
 
-            Pebble pebble = new Pebble("COM13");
+            Pebble pebble = Pebble.GetPebble();
             pebble.Connect();
             pebble.MessageReceived += pebble_MessageReceived;
 
