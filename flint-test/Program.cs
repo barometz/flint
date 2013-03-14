@@ -1,5 +1,6 @@
 ﻿using System;
 using flint;
+using SharpMenu;
 
 namespace flint_test
 {
@@ -7,23 +8,46 @@ namespace flint_test
     /// </summary>
     class Program
     {
+        static Pebble pebble;
+
         static void Main(string[] args)
         {
-            Pebble pebble = Pebble.GetPebble();
+            Boolean alive = true;
+            SharpMenu<Action> menu = new SharpMenu<Action>();
+            menu.Add(() => pebble.Ping(235), "Send the Pebble a ping");
+            menu.Add(() => pebble.NotificationSMS("+3278051200", "It's time."), "Send an SMS notification");
+            menu.Add(() => pebble.NotificationMail("Your pal", "URGENT NOTICE", "There is a thing you need to do. Urgently."),
+                "Send an email notification");
+            menu.Add(() => pebble.NowPlaying("That dude", "That record", "That track"), "Send some metadata to the music app");
+            menu.Add(() => pebble.BadPing(), "Send a bad ping to trigger a LOGS response");
+            menu.Add(() => alive = false, "Exit");
+
+            Console.WriteLine("Welcome to the Flint test environment.  "
+                + "Please remain seated and press enter to autodetect a paired Pebble.");
+            Console.ReadLine();
+
             try
             {
+                pebble = Pebble.GetPebble();
                 pebble.Connect();
             }
-            catch (System.IO.IOException)
+            catch (PlatformNotSupportedException e)
             {
-                Console.WriteLine("Timeout while connecting.  Press enter to exit.");
+                Console.WriteLine(e.Message);
+                Console.WriteLine("Press enter to exit.");
                 Console.ReadLine();
                 return;
             }
+            catch (System.IO.IOException e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine("Press enter to exit.");
+                Console.ReadLine();
+                return;
+            }
+            Console.WriteLine("Successfully connected!");
             Console.WriteLine(pebble);
-            pebble.GetVersion();
-            Console.WriteLine(pebble.Firmware);
-            Console.WriteLine(pebble.RecoveryFirmware);
+
             pebble.MessageReceived += pebble_MessageReceived;
             // Subscribe to specific events
             pebble.LogReceived += pebble_LogReceived;
@@ -32,31 +56,15 @@ namespace flint_test
             // Subscribe to an event for a particular endpoint
             pebble.RegisterEndpointCallback(Pebble.Endpoints.PING, pingReceived);
 
-            Console.WriteLine("Hi! Welcome to Flint.  Press enter to try a notification");
-            Console.ReadLine();
-            pebble.NotificationMail("Your pal", "URGENT NOTICE", "You need to do something!");
+            pebble.GetVersion();
+            Console.WriteLine(pebble.Firmware);
+            Console.WriteLine(pebble.RecoveryFirmware);
 
-            Console.WriteLine("Press enter to try a ping.");
-            Console.ReadLine();
-            try
+            while (alive)
             {
-                pebble.Ping(123);
-                Console.WriteLine("Pinged :D");
+                menu.WriteMenu();
+                menu.Prompt()();
             }
-            catch (TimeoutException e)
-            {
-                Console.WriteLine("Timeout :(");
-            }
-
-            Console.WriteLine("Bad ping to trigger log..");
-            Console.ReadLine();
-            pebble.BadPing();
-
-            Console.WriteLine("Now playing test.  Hit enter and check the music app.");
-            Console.ReadLine();
-            pebble.NowPlaying("That dude", "That record", "That track");
-
-            Console.ReadLine();
         }
 
         static void pebble_MediaControlReceived(object sender, MediaControlReceivedEventArgs e)
