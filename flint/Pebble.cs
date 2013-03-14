@@ -109,6 +109,9 @@ namespace flint
 
         }
 
+        public event EventHandler OnDisconnect;
+        public event EventHandler OnConnect;
+
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<LogReceivedEventArgs> LogReceived;
         public event EventHandler<PingReceivedEventArgs> PingReceived;
@@ -130,6 +133,7 @@ namespace flint
                 return pebbleProt.Port;
             }
         }
+        public Boolean Alive { get; private set; }
 
         /** Pebble version info **/
         public FirmwareVersion Firmware { get; private set; }
@@ -138,6 +142,8 @@ namespace flint
         PebbleProtocol pebbleProt;
         uint sessionCaps = (uint)SessionCaps.GAMMA_RAY;
         uint remoteCaps = (uint)(RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID);
+        
+        System.Timers.Timer pingTimer;
 
         /// <summary> Create a new Pebble 
         /// </summary>
@@ -146,6 +152,7 @@ namespace flint
         /// Nothing explodes when it's incorrect, it's merely used for identification.</param>
         public Pebble(String port, String pebbleid)
         {
+            Alive = false;
             PebbleID = pebbleid;
             pebbleProt = new PebbleProtocol(port);
             pebbleProt.RawMessageReceived += pebbleProt_RawMessageReceived;
@@ -153,6 +160,10 @@ namespace flint
             endpointEvents = new Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>>();
             RegisterEndpointCallback(Endpoints.PHONE_VERSION, PhoneVersionReceived);
             RegisterEndpointCallback(Endpoints.VERSION, VersionReceived);
+
+            pingTimer = new System.Timers.Timer(16180);
+            pingTimer.Elapsed += pingTimer_Elapsed;
+            pingTimer.Start();
         }
 
         /// <summary> Returns one of the paired Pebbles, or a specific one 
@@ -250,6 +261,57 @@ namespace flint
         public void Connect()
         {
             pebbleProt.Connect();
+            Alive = true;
+            EventHandler onconnect = OnConnect;
+            if (onconnect != null)
+            {
+                onconnect(this, new EventArgs());
+            }
+        }
+
+        public void Disconnect()
+        {
+            try
+            {
+                pebbleProt.Close();
+            }
+            finally
+            {
+                // If closing the serial port didn't work for some reason we're still effectively 
+                // disconnected, although the port will probably be in an invalid state.  Need to 
+                // find a good way to handle that.
+                Alive = false;
+                EventHandler ondisconnect = OnDisconnect;
+                if (ondisconnect != null)
+                {
+                    ondisconnect(this, new EventArgs());
+                }
+            }
+        }
+
+        /// <summary> Recurring prod to check whether the Pebble is still connected and responding.  
+        /// Sends a "bad ping" to trigger a LOGS response as we don't want the Pebble to buzz every 
+        /// n seconds.
+        /// </summary>
+        /// <remarks>
+        /// Ugly hack?  Yes.  It might be possible to do this more properly with the 32feet.NET bt lib.
+        /// </remarks>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void pingTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (Alive)
+            {
+                try
+                {
+                    BadPing();
+                    new EndpointSync(this, Endpoints.LOGS).WaitAndReturn();
+                }
+                catch (TimeoutException)
+                {
+                    Disconnect();
+                }
+            }
         }
 
         /// <summary> Subscribe to the event of a particular endpoint message 
@@ -298,7 +360,7 @@ namespace flint
             // No need to worry about endianness as it's sent back byte for byte anyway.  
             Array.Copy(BitConverter.GetBytes(cookie), 0, _cookie, 1, 4);
 
-            pebbleProt.sendMessage((UInt16)Endpoints.PING, _cookie);
+            sendMessage(Endpoints.PING, _cookie);
             if (!async)
             {
                 var wait = new EndpointSync(this, Endpoints.PING);
@@ -326,7 +388,7 @@ namespace flint
                 byte[] len = { Convert.ToByte(_part.Length) };
                 data = data.Concat(len).Concat(_part).ToArray();
             }
-            pebbleProt.sendMessage((UInt16)Endpoints.NOTIFICATION, data);
+            sendMessage(Endpoints.NOTIFICATION, data);
         }
 
         /// <summary>
@@ -372,7 +434,7 @@ namespace flint
             data = data.Concat(albumlen).Concat(_album).ToArray();
             data = data.Concat(tracklen).Concat(_track).ToArray();
 
-            pebbleProt.sendMessage((UInt16)Endpoints.MUSIC_CONTROL, data);
+            sendMessage(Endpoints.MUSIC_CONTROL, data);
         }
 
         /// <summary> Send a malformed ping (to trigger a LOGS response)
@@ -380,13 +442,13 @@ namespace flint
         public void BadPing()
         {
             byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
-            pebbleProt.sendMessage((UInt16)Endpoints.PING, cookie);
+            sendMessage(Endpoints.PING, cookie);
         }
 
         public void GetVersion(Boolean async = false)
         {
             byte[] data = { 0 };
-            pebbleProt.sendMessage((ushort)Endpoints.VERSION, data);
+            sendMessage(Endpoints.VERSION, data);
             if (!async)
             {
                 var wait = new EndpointSync(this, Endpoints.VERSION);
@@ -489,7 +551,30 @@ namespace flint
 
             byte[] msg = new byte[0];
             msg = msg.Concat(prefix).Concat(session).Concat(remote).ToArray();
-            pebbleProt.sendMessage((ushort)Endpoints.PHONE_VERSION, msg);
+            sendMessage(Endpoints.PHONE_VERSION, msg);
+        }
+
+        /// <summary> Send a message to the connected Pebble.  
+        /// The payload should at most be 2048 bytes large.
+        /// </summary>
+        /// <remarks>
+        /// Yes, the docs at developers.getpebble.com say 4 kB.  I've received some errors from the Pebble that indicated 2 kB
+        /// and that's what I'll assume for the time being.
+        /// </remarks>
+        /// <param name="endpoint"></param>
+        /// <param name="payload"></param>
+        /// <exception cref="ArgumentOutOfRangeException">Passed on when the payload is too large.</exception>
+        void sendMessage(Endpoints endpoint, byte[] payload)
+        {
+            try
+            {
+                pebbleProt.sendMessage((ushort)endpoint, payload);
+            }
+            catch (TimeoutException e)
+            {
+                Alive = false;
+
+            }
         }
 
         /// <summary> Convert a Unix timestamp to a DateTime object.

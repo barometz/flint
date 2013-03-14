@@ -63,6 +63,11 @@ namespace flint
             serialPort.Open();
         }
 
+        public void Close()
+        {
+            serialPort.Close();
+        }
+
         /// <summary> Send a message to the connected Pebble.  
         /// The payload should at most be 2048 bytes large.
         /// </summary>
