@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Text;
+using InTheHand.Net.Bluetooth;
 using InTheHand.Net.Sockets;
 
 namespace flint
@@ -269,8 +270,52 @@ namespace flint
             }
         }
 
+        /// <summary>
+        /// Generic notification support.  Shouldn't have to use this, but feel free.
+        /// </summary>
+        /// <param name="type">Notification type.  So far we've got 0 for mail, 1 for SMS.</param>
+        /// <param name="parts">Message parts will be clipped to 255 bytes.</param>
+        void Notification(byte type, params String[] parts)
+        {
+            String[] ts = { (new DateTime(1970, 1, 1) - DateTime.Now).TotalSeconds.ToString() };
+            parts = parts.Take(2).Concat(ts).Concat(parts.Skip(2)).ToArray();
+            byte[] data = { type };
+            foreach (String part in parts)
+            {
+                byte[] _part = Encoding.UTF8.GetBytes(part);
+                if (_part.Length > 255)
+                {
+                    _part = _part.Take(255).ToArray();
+                }
+                byte[] len = { Convert.ToByte(_part.Length) };
+                data = data.Concat(len).Concat(_part).ToArray();
+            }
+            pebbleProt.sendMessage((UInt16)Endpoints.NOTIFICATION, data);
+        }
+
+        /// <summary>
+        /// Send an email notification.  The message parts are clipped to 255 bytes.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="subject"></param>
+        /// <param name="body"></param>
+        public void NotificationMail(String sender, String subject, String body)
+        {
+            Notification(0, sender, body, subject);
+        }
+
+        /// <summary>
+        /// Send an SMS notification.  The message parts are clipped to 255 bytes.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="body"></param>
+        public void NotificationSMS(String sender, String body)
+        {
+            Notification(1, sender, body);
+        }
+
         /// <summary> Send "Now playing.." metadata to the Pebble.  
-        /// The track, album and artist should each not be longer than 256 bytes.
+        /// The track, album and artist should each not be longer than 255 bytes.
         /// </summary>
         /// <param name="track"></param>
         /// <param name="album"></param>

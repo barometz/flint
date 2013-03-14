@@ -21,8 +21,8 @@ namespace flint_test
                 return;
             }
             Console.WriteLine(pebble);
-            pebble.MessageReceived += pebble_MessageReceived;
 
+            pebble.MessageReceived += pebble_MessageReceived;
             // Subscribe to specific events
             pebble.LogReceived += pebble_LogReceived;
             pebble.PingReceived += pebble_PingReceived;
@@ -30,7 +30,11 @@ namespace flint_test
             // Subscribe to an event for a particular endpoint
             pebble.RegisterEndpointCallback(Pebble.Endpoints.PING, pingReceived);
 
-            Console.WriteLine("Hi! Welcome to Flint.  Press enter to try a ping.");
+            Console.WriteLine("Hi! Welcome to Flint.  Press enter to try a notification");
+            Console.ReadLine();
+            pebble.NotificationMail("Your pal", "URGENT NOTICE", "You need to do something!");
+
+            Console.WriteLine("Press enter to try a ping.");
             Console.ReadLine();
             try
             {
@@ -49,6 +53,7 @@ namespace flint_test
             Console.WriteLine("Now playing test.  Hit enter and check the music app.");
             Console.ReadLine();
             pebble.NowPlaying("That dude", "That record", "That track");
+
             Console.ReadLine();
         }
 
