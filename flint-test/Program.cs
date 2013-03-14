@@ -21,7 +21,9 @@ namespace flint_test
                 return;
             }
             Console.WriteLine(pebble);
-
+            pebble.GetVersion();
+            Console.WriteLine(pebble.Firmware);
+            Console.WriteLine(pebble.RecoveryFirmware);
             pebble.MessageReceived += pebble_MessageReceived;
             // Subscribe to specific events
             pebble.LogReceived += pebble_LogReceived;
@@ -38,7 +40,7 @@ namespace flint_test
             Console.ReadLine();
             try
             {
-                pebble.Ping(cookie: 123);
+                pebble.Ping(123);
                 Console.WriteLine("Pinged :D");
             }
             catch (TimeoutException e)

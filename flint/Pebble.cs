@@ -20,7 +20,7 @@ namespace flint
         {
             FIRMWARE = 1,
             TIME = 11,
-            VERSIONS = 16,
+            VERSION = 16,
             PHONE_VERSION = 17,
             SYSTEM_MESSAGE = 18,
             MUSIC_CONTROL = 32,
@@ -78,6 +78,37 @@ namespace flint
             COMPASS = 2048
         }
 
+        public class FirmwareVersion
+        {
+            public DateTime Timestamp { get; private set; }
+            public String Version { get; private set; }
+            public String Commit { get; private set; }
+            public Boolean IsRecovery { get; private set; }
+            public byte HardwarePlatform { get; private set; }
+            public byte MetadataVersion { get; private set; }
+
+            public FirmwareVersion(DateTime timestamp, String version, String commit,
+                bool isrecovery, byte hardwareplatform, byte metadataversion)
+            {
+                Timestamp = timestamp;
+                Version = version;
+                Commit = commit;
+                IsRecovery = isrecovery;
+                HardwarePlatform = hardwareplatform;
+                MetadataVersion = metadataversion;
+            }
+
+            public override string ToString()
+            {
+                String format = "Version {0}, commit {1} ({2})\n"
+                    + "Recovery:         {3}\n"
+                    + "HW Platform:      {4}\n"
+                    + "Metadata version: {5}";
+                return String.Format(format, Version, Commit, Timestamp, IsRecovery, HardwarePlatform, MetadataVersion);
+            }
+
+        }
+
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
         public event EventHandler<LogReceivedEventArgs> LogReceived;
         public event EventHandler<PingReceivedEventArgs> PingReceived;
@@ -100,6 +131,10 @@ namespace flint
             }
         }
 
+        /** Pebble version info **/
+        public FirmwareVersion Firmware { get; private set; }
+        public FirmwareVersion RecoveryFirmware { get; private set; }
+
         PebbleProtocol pebbleProt;
         uint sessionCaps = (uint)SessionCaps.GAMMA_RAY;
         uint remoteCaps = (uint)(RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID);
@@ -117,6 +152,7 @@ namespace flint
 
             endpointEvents = new Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>>();
             RegisterEndpointCallback(Endpoints.PHONE_VERSION, PhoneVersionReceived);
+            RegisterEndpointCallback(Endpoints.VERSION, VersionReceived);
         }
 
         /// <summary> Returns one of the paired Pebbles, or a specific one 
@@ -275,7 +311,7 @@ namespace flint
         /// </summary>
         /// <param name="type">Notification type.  So far we've got 0 for mail, 1 for SMS.</param>
         /// <param name="parts">Message parts will be clipped to 255 bytes.</param>
-        void Notification(byte type, params String[] parts)
+        public void Notification(byte type, params String[] parts)
         {
             String[] ts = { (new DateTime(1970, 1, 1) - DateTime.Now).TotalSeconds.ToString() };
             parts = parts.Take(2).Concat(ts).Concat(parts.Skip(2)).ToArray();
@@ -347,6 +383,17 @@ namespace flint
             pebbleProt.sendMessage((UInt16)Endpoints.PING, cookie);
         }
 
+        public void GetVersion(Boolean async = false)
+        {
+            byte[] data = { 0 };
+            pebbleProt.sendMessage((ushort)Endpoints.VERSION, data);
+            if (!async)
+            {
+                var wait = new EndpointSync(this, Endpoints.VERSION);
+                wait.WaitAndReturn(timeout: 5000);
+            }
+        }
+
         /** Pebble message event handlers **/
 
         void pebbleProt_RawMessageReceived(object sender, RawMessageReceivedEventArgs e)
@@ -396,6 +443,39 @@ namespace flint
             }
         }
 
+        void VersionReceived(object sender, MessageReceivedEventArgs e)
+        {
+            this.Firmware = Pebble.ParseVersion(e.Message.Skip(1).Take(47).ToArray());
+            this.RecoveryFirmware = Pebble.ParseVersion(e.Message.Skip(48).Take(47).ToArray());
+        }
+
+        static FirmwareVersion ParseVersion(byte[] data)
+        {
+            /*
+             * The layout of the version info is:
+             *  0: 3 Timestamp (int32)
+             *  4:35 Version (string, padded with \0)
+             * 36:43 Commit (hash?) (string, padded with \0)
+             * 44:   Is recovery? (Boolean)
+             * 45:   HW Platform (byte)
+             * 46:   Metadata version (byte)
+             */
+            byte[] _ts = data.Take(4).ToArray();
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(_ts);
+            }
+            DateTime timestamp = Pebble.timestampToDT(BitConverter.ToInt32(_ts, 0));
+            String version = Encoding.UTF8.GetString(data.Skip(4).Take(32).ToArray());
+            String commit = Encoding.UTF8.GetString(data.Skip(36).Take(8).ToArray());
+            version = version.Substring(0, version.IndexOf('\0'));
+            commit = commit.Substring(0, commit.IndexOf('\0'));
+            Boolean is_recovery = BitConverter.ToBoolean(data, 44);
+            byte hardware_platform = data[45];
+            byte metadata_ver = data[46];
+            return new FirmwareVersion(timestamp, version, commit, is_recovery, hardware_platform, metadata_ver);
+        }
+
         void PhoneVersionReceived(object sender, MessageReceivedEventArgs e)
         {
             byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -410,6 +490,20 @@ namespace flint
             byte[] msg = new byte[0];
             msg = msg.Concat(prefix).Concat(session).Concat(remote).ToArray();
             pebbleProt.sendMessage((ushort)Endpoints.PHONE_VERSION, msg);
+        }
+
+        /// <summary> Convert a Unix timestamp to a DateTime object.
+        /// </summary>
+        /// <remarks>
+        /// This has some issues, as Pebble isn't timezone-aware and it's 
+        /// unclear how either side deals with leap seconds.  For basic usage
+        /// this should be plenty, though.
+        /// </remarks>
+        /// <param name="ts"></param>
+        /// <returns></returns>
+        public static DateTime timestampToDT(Int32 ts)
+        {
+            return new DateTime(1970, 1, 1).AddSeconds(ts);
         }
 
         public override string ToString()
