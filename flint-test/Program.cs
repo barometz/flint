@@ -72,6 +72,8 @@ namespace flint_test
                 "Send an email notification");
             menu.Add(() => pebble.NowPlaying("That dude", "That record", "That track"), "Send some metadata to the music app");
             menu.Add(() => pebble.BadPing(), "Send a bad ping to trigger a LOGS response");
+            menu.Add(() => Console.WriteLine(pebble.GetTime().Time), "Get the time from the Pebble");
+            menu.Add(() => pebble.SetTime(DateTime.Now), "Sync Pebble time");
             menu.Add(() => pebble.Disconnect(), "Exit");
 
             pebble.OnDisconnect += pebble_OnDisconnect;

@@ -12,15 +12,15 @@ namespace flint
     /// the thread where messages are received, waiting for this reply may/will
     /// block and ruin everything.
     /// </remarks>
-    public class EndpointSync
+    public class EndpointSync<T> where T : MessageReceivedEventArgs
     {
         Pebble pebble;
         Pebble.Endpoints endpoint;
 
-        public byte[] Result { get; private set; }
+        public T Result { get; private set; }
         public Boolean Triggered { get; private set; }
 
-        public EndpointSync(Pebble pebble, Pebble.Endpoints endpoint)
+        public EndpointSync(Pebble pebble, Pebble.Endpoints endpoint) 
         {
             this.pebble = pebble;
             this.endpoint = endpoint;
@@ -33,7 +33,7 @@ namespace flint
         /// <param name="timeout">The time to wait until giving up entirely, at 
         /// which point a TimeoutException is raised.</param>
         /// <returns></returns>
-        public byte[] WaitAndReturn(int delay = 15, int timeout = 1000)
+        public T WaitAndReturn(int delay = 15, int timeout = 1000)
         {
             DateTime start = DateTime.Now;
             while (!this.Triggered)
@@ -50,7 +50,7 @@ namespace flint
         void trigger(object sender, MessageReceivedEventArgs e)
         {
             pebble.DeregisterEndpointCallback(endpoint, trigger);
-            Result = e.Message;
+            Result = (T)Activator.CreateInstance(typeof(T), endpoint, e.Payload);
             Triggered = true;
         }
     }

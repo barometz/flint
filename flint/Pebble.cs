@@ -305,7 +305,7 @@ namespace flint
                 try
                 {
                     BadPing();
-                    new EndpointSync(this, Endpoints.LOGS).WaitAndReturn();
+                    new EndpointSync<LogReceivedEventArgs>(this, Endpoints.LOGS).WaitAndReturn();
                 }
                 catch (TimeoutException)
                 {
@@ -350,11 +350,9 @@ namespace flint
         /// <summary> Send the Pebble a ping. 
         /// </summary>
         /// <param name="cookie"></param>
-        /// <param name="async">If set to true, the method returns immediately 
-        /// and you'll have to keep an eye on the relevant event.  Otherwise 
-        /// it'll wait until there's a reply or timeout.  The latter will throw
-        /// a TimeoutException.</param>
-        public void Ping(UInt32 cookie = 0, Boolean async = false)
+        /// <param name="async">If true, return null immediately and let the caller wait for a PING event.  If false, 
+        /// wait for the reply and return the PingReceivedEventArgs.</param>
+        public PingReceivedEventArgs Ping(UInt32 cookie = 0, Boolean async = false)
         {
             byte[] _cookie = new byte[5];
             // No need to worry about endianness as it's sent back byte for byte anyway.  
@@ -363,8 +361,12 @@ namespace flint
             sendMessage(Endpoints.PING, _cookie);
             if (!async)
             {
-                var wait = new EndpointSync(this, Endpoints.PING);
-                wait.WaitAndReturn(timeout: 5000);
+                var wait = new EndpointSync<PingReceivedEventArgs>(this, Endpoints.PING);
+                return wait.WaitAndReturn(timeout: 5000);
+            }
+            else
+            {
+                return null;
             }
         }
 
@@ -437,6 +439,40 @@ namespace flint
             sendMessage(Endpoints.MUSIC_CONTROL, data);
         }
 
+        /// <summary>
+        /// Get the time from the connected Pebble.
+        /// </summary>
+        /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
+        /// the appropriate TimeReceivedEventArgs.</param>
+        /// <returns>A TimeReceivedEventArgs with the time, or null.</returns>
+        public TimeReceivedEventArgs GetTime(bool async = false)
+        {
+            byte[] data = { 0 };
+            sendMessage(Endpoints.TIME, data);
+            if (!async)
+            {
+                var wait = new EndpointSync<TimeReceivedEventArgs>(this, Endpoints.TIME);
+                return wait.WaitAndReturn();
+            }
+            else 
+            {
+                return null;
+            } 
+        }
+
+        public void SetTime(DateTime dt)
+        {
+            byte[] data = { 2 };
+            int timestamp = (int)(dt - new DateTime(1970, 1, 1)).TotalSeconds;
+            byte[] _timestamp = BitConverter.GetBytes(timestamp);
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(_timestamp);
+            }
+            data = data.Concat(_timestamp).ToArray();
+            sendMessage(Endpoints.TIME, data);
+        }
+
         /// <summary> Send a malformed ping (to trigger a LOGS response)
         /// </summary>
         public void BadPing()
@@ -445,13 +481,17 @@ namespace flint
             sendMessage(Endpoints.PING, cookie);
         }
 
+        /// <summary> Get the Pebble's version info.  
+        /// </summary>
+        /// <param name="async">If true, return immediately.  If false, wait until the response 
+        /// has been received.</param>
         public void GetVersion(Boolean async = false)
         {
             byte[] data = { 0 };
             sendMessage(Endpoints.VERSION, data);
             if (!async)
             {
-                var wait = new EndpointSync(this, Endpoints.VERSION);
+                var wait = new EndpointSync<MessageReceivedEventArgs>(this, Endpoints.VERSION);
                 wait.WaitAndReturn(timeout: 5000);
             }
         }
@@ -507,8 +547,8 @@ namespace flint
 
         void VersionReceived(object sender, MessageReceivedEventArgs e)
         {
-            this.Firmware = Pebble.ParseVersion(e.Message.Skip(1).Take(47).ToArray());
-            this.RecoveryFirmware = Pebble.ParseVersion(e.Message.Skip(48).Take(47).ToArray());
+            this.Firmware = Pebble.ParseVersion(e.Payload.Skip(1).Take(47).ToArray());
+            this.RecoveryFirmware = Pebble.ParseVersion(e.Payload.Skip(48).Take(47).ToArray());
         }
 
         static FirmwareVersion ParseVersion(byte[] data)
@@ -527,7 +567,7 @@ namespace flint
             {
                 Array.Reverse(_ts);
             }
-            DateTime timestamp = Pebble.timestampToDT(BitConverter.ToInt32(_ts, 0));
+            DateTime timestamp = Pebble.TimestampToDateTime(BitConverter.ToInt32(_ts, 0));
             String version = Encoding.UTF8.GetString(data.Skip(4).Take(32).ToArray());
             String commit = Encoding.UTF8.GetString(data.Skip(36).Take(8).ToArray());
             version = version.Substring(0, version.IndexOf('\0'));
@@ -586,7 +626,7 @@ namespace flint
         /// </remarks>
         /// <param name="ts"></param>
         /// <returns></returns>
-        public static DateTime timestampToDT(Int32 ts)
+        public static DateTime TimestampToDateTime(Int32 ts)
         {
             return new DateTime(1970, 1, 1).AddSeconds(ts);
         }
