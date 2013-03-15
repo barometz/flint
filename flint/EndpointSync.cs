@@ -33,7 +33,7 @@ namespace flint
         /// <param name="timeout">The time to wait until giving up entirely, at 
         /// which point a TimeoutException is raised.</param>
         /// <returns></returns>
-        public T WaitAndReturn(int delay = 15, int timeout = 1000)
+        public T WaitAndReturn(int delay = 15, int timeout = 5000)
         {
             DateTime start = DateTime.Now;
             while (!this.Triggered)

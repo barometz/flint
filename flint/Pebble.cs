@@ -289,9 +289,7 @@ namespace flint
             }
         }
 
-        /// <summary> Recurring prod to check whether the Pebble is still connected and responding.  
-        /// Sends a "bad ping" to trigger a LOGS response as we don't want the Pebble to buzz every 
-        /// n seconds.
+        /// <summary> Recurring prod to check whether the Pebble is still connected and responding.
         /// </summary>
         /// <remarks>
         /// Ugly hack?  Yes.  It might be possible to do this more properly with the 32feet.NET bt lib.
@@ -304,8 +302,7 @@ namespace flint
             {
                 try
                 {
-                    BadPing();
-                    new EndpointSync<LogReceivedEventArgs>(this, Endpoints.LOGS).WaitAndReturn();
+                    GetTime();
                 }
                 catch (TimeoutException)
                 {
@@ -332,7 +329,8 @@ namespace flint
             }
             else
             {
-                endpointEvents[endpoint] = new EventHandler<MessageReceivedEventArgs>(handler);
+                endpointEvents[endpoint] = new EventHandler<MessageReceivedEventArgs>((o, m) => { });
+                endpointEvents[endpoint] += handler;
             }
         }
 
@@ -613,7 +611,6 @@ namespace flint
             catch (TimeoutException e)
             {
                 Alive = false;
-
             }
         }
 

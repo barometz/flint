@@ -14,7 +14,8 @@ namespace flint
         public MessageReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
         {
             Endpoint = endpoint;
-            Payload = payload;
+            Payload = new byte[payload.Length];
+            payload.CopyTo(Payload, 0);
         }
     }
 
@@ -32,15 +33,17 @@ namespace flint
         public TimeReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
             : base(endpoint, payload)
         {
-            if (payload.Length != 5)
+            if (Payload.Length != 5)
             {
                 throw new ArgumentOutOfRangeException("payload", "TIME payload must be 5 bytes, the latter four being the timestamp.");
             }
+
             if (BitConverter.IsLittleEndian)
             {
-                Array.Reverse(payload, 1, 4);
+                Array.Reverse(Payload, 1, 4);
             }
-            int timestamp = BitConverter.ToInt32(payload, 1);
+            
+            int timestamp = BitConverter.ToInt32(Payload, 1);
             Time = Pebble.TimestampToDateTime(timestamp);
         }
 
@@ -64,12 +67,12 @@ namespace flint
         public PingReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
             : base(endpoint, payload)
         {
-            if (payload.Length != 5)
+            if (Payload.Length != 5)
             {
                 throw new ArgumentOutOfRangeException("payload", "Payload for PING must be five bytes");
             }
             // No need to worry about endianness as ping cookies are echoed byte for byte.
-            Cookie = BitConverter.ToUInt32(payload, 1);
+            Cookie = BitConverter.ToUInt32(Payload, 1);
         }
 
         public PingReceivedEventArgs(byte[] payload)
@@ -93,7 +96,7 @@ namespace flint
         {
             byte[] metadata = new byte[8];
             byte msgsize;
-            Array.Copy(payload, metadata, 8);
+            Array.Copy(Payload, metadata, 8);
             /* 
              * Unpack the metadata.  Eight bytes:
              * 0..3 -> integer timestamp
@@ -119,8 +122,8 @@ namespace flint
             // Now to extract the actual data
             byte[] _filename = new byte[16];
             byte[] _data = new byte[msgsize];
-            Array.Copy(payload, 8, _filename, 0, 16);
-            Array.Copy(payload, 24, _data, 0, msgsize);
+            Array.Copy(Payload, 8, _filename, 0, 16);
+            Array.Copy(Payload, 24, _data, 0, msgsize);
 
             Filename = Encoding.UTF8.GetString(_filename);
             Message = Encoding.UTF8.GetString(_data);
@@ -152,7 +155,7 @@ namespace flint
         public MediaControlReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
             : base(endpoint, payload)
         {
-            Command = (Pebble.MediaControls)payload[0];
+            Command = (Pebble.MediaControls)Payload[0];
         }
 
         /// <summary> Create a new media control event.  The payload should be 
