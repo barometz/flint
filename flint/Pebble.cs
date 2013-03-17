@@ -134,6 +134,8 @@ namespace flint
             }
         }
         public Boolean Alive { get; private set; }
+        // Time in ms to wait before considering the recurring ping to be dead
+        public int PingTimeout { get; set; }
 
         /** Pebble version info **/
         public FirmwareVersion Firmware { get; private set; }
@@ -142,7 +144,7 @@ namespace flint
         PebbleProtocol pebbleProt;
         uint sessionCaps = (uint)SessionCaps.GAMMA_RAY;
         uint remoteCaps = (uint)(RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID);
-        
+
         System.Timers.Timer pingTimer;
 
         /// <summary> Create a new Pebble 
@@ -153,6 +155,7 @@ namespace flint
         public Pebble(String port, String pebbleid)
         {
             Alive = false;
+            PingTimeout = 10000;
             PebbleID = pebbleid;
             pebbleProt = new PebbleProtocol(port);
             pebbleProt.RawMessageReceived += pebbleProt_RawMessageReceived;
@@ -300,9 +303,13 @@ namespace flint
         {
             if (Alive)
             {
+                byte[] data = { 0 };
+                
                 try
                 {
-                    GetTime();
+                    sendMessage(Endpoints.TIME, data);
+                    var wait = new EndpointSync<TimeReceivedEventArgs>(this, Endpoints.TIME);
+                    wait.WaitAndReturn(timeout: PingTimeout);
                 }
                 catch (TimeoutException)
                 {
@@ -360,7 +367,7 @@ namespace flint
             if (!async)
             {
                 var wait = new EndpointSync<PingReceivedEventArgs>(this, Endpoints.PING);
-                return wait.WaitAndReturn(timeout: 5000);
+                return wait.WaitAndReturn(timeout: 10000);
             }
             else
             {
