@@ -16,6 +16,9 @@ namespace flint
     {
         // TODO: Exception handling.
 
+        /// <summary> Endpoints (~"commands") used by Pebble to indicate particular instructions 
+        /// or instruction types.
+        /// </summary>
         public enum Endpoints : ushort
         {
             FIRMWARE = 1,
@@ -39,6 +42,7 @@ namespace flint
             MAX_ENDPOINT = 65535
         }
 
+        /// <summary> Media control instructions as understood by Pebble </summary>
         public enum MediaControls
         {
             PlayPause = 1,
@@ -109,12 +113,24 @@ namespace flint
 
         }
 
+        /// <summary> Occurs when the Pebble (is considered to have) disconnected, 
+        /// either by manual disconnect or through a ping timeout.
+        /// </summary>
         public event EventHandler OnDisconnect;
+        /// <summary> Occurs when the serial interface has successfully connected.
+        /// Does not guarantee that the connection actually works.
+        /// </summary>
         public event EventHandler OnConnect;
 
+        /// <summary> Received a full message (any message with complete endpoint and payload) 
+        /// from the Pebble.
+        /// </summary>
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+        /// <summary> Received a LOGS message from the Pebble. </summary>
         public event EventHandler<LogReceivedEventArgs> LogReceived;
+        /// <summary> Received a PING message from the Pebble, presumably in response. </summary>
         public event EventHandler<PingReceivedEventArgs> PingReceived;
+        /// <summary> Received a music control message (next/prev/playpause) from the Pebble. </summary>
         public event EventHandler<MediaControlReceivedEventArgs> MediaControlReceived;
         /// <summary> Holds callbacks for the separate endpoints.  
         /// Saves a lot of typing. There's probably a good reason not to do this.
@@ -138,7 +154,10 @@ namespace flint
         public int PingTimeout { get; set; }
 
         /** Pebble version info **/
+
+        /// <summary>The main firmware installed on the Pebble. </summary>
         public FirmwareVersion Firmware { get; private set; }
+        /// <summary> The recovery firmware installed on the Pebble. </summary>
         public FirmwareVersion RecoveryFirmware { get; private set; }
 
         PebbleProtocol pebbleProt;
@@ -272,6 +291,9 @@ namespace flint
             }
         }
 
+        /// <summary>
+        /// Disconnect from the Pebble, if a connection existed.
+        /// </summary>
         public void Disconnect()
         {
             try
@@ -341,6 +363,9 @@ namespace flint
             }
         }
 
+        /// <summary> Deregister a given callback for a given function. </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="handler"></param>
         public void DeregisterEndpointCallback(Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler)
         {
             if (endpointEvents.ContainsKey(endpoint)
@@ -350,10 +375,9 @@ namespace flint
             }
         }
 
-        /** Pebble actions **/
+        #region Messages to Pebble
 
-        /// <summary> Send the Pebble a ping. 
-        /// </summary>
+        /// <summary> Send the Pebble a ping. </summary>
         /// <param name="cookie"></param>
         /// <param name="async">If true, return null immediately and let the caller wait for a PING event.  If false, 
         /// wait for the reply and return the PingReceivedEventArgs.</param>
@@ -375,9 +399,7 @@ namespace flint
             }
         }
 
-        /// <summary>
-        /// Generic notification support.  Shouldn't have to use this, but feel free.
-        /// </summary>
+        /// <summary> Generic notification support.  Shouldn't have to use this, but feel free. </summary>
         /// <param name="type">Notification type.  So far we've got 0 for mail, 1 for SMS.</param>
         /// <param name="parts">Message parts will be clipped to 255 bytes.</param>
         public void Notification(byte type, params String[] parts)
@@ -425,7 +447,7 @@ namespace flint
         /// <param name="track"></param>
         /// <param name="album"></param>
         /// <param name="artist"></param>
-        public void NowPlaying(String artist, String album, String track)
+        public void SetNowPlaying(String artist, String album, String track)
         {
             // No idea what this does.  Do it anyway.
             byte[] data = { 16 };
@@ -444,6 +466,46 @@ namespace flint
             sendMessage(Endpoints.MUSIC_CONTROL, data);
         }
 
+        /// <summary> Set the time on the Pebble. Mostly convenient for syncing. </summary>
+        /// <param name="dt">The desired DateTime.  Doesn't care about timezones.</param>
+        public void SetTime(DateTime dt)
+        {
+            byte[] data = { 2 };
+            int timestamp = (int)(dt - new DateTime(1970, 1, 1)).TotalSeconds;
+            byte[] _timestamp = BitConverter.GetBytes(timestamp);
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(_timestamp);
+            }
+            data = data.Concat(_timestamp).ToArray();
+            sendMessage(Endpoints.TIME, data);
+        }
+
+        /// <summary> Send a malformed ping (to trigger a LOGS response) </summary>
+        public void BadPing()
+        {
+            byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
+            sendMessage(Endpoints.PING, cookie);
+        }
+
+        #endregion
+
+        #region Requests to send to Pebble
+
+        /// <summary> Get the Pebble's version info.  </summary>
+        /// <param name="async">If true, return immediately.  If false, wait until the response 
+        /// has been received.</param>
+        public void GetVersion(Boolean async = false)
+        {
+            byte[] data = { 0 };
+            sendMessage(Endpoints.VERSION, data);
+            if (!async)
+            {
+                var wait = new EndpointSync<MessageReceivedEventArgs>(this, Endpoints.VERSION);
+                wait.WaitAndReturn(timeout: 5000);
+            }
+        }
+
         /// <summary>
         /// Get the time from the connected Pebble.
         /// </summary>
@@ -459,49 +521,37 @@ namespace flint
                 var wait = new EndpointSync<TimeReceivedEventArgs>(this, Endpoints.TIME);
                 return wait.WaitAndReturn();
             }
-            else 
+            else
             {
                 return null;
-            } 
-        }
-
-        public void SetTime(DateTime dt)
-        {
-            byte[] data = { 2 };
-            int timestamp = (int)(dt - new DateTime(1970, 1, 1)).TotalSeconds;
-            byte[] _timestamp = BitConverter.GetBytes(timestamp);
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(_timestamp);
-            }
-            data = data.Concat(_timestamp).ToArray();
-            sendMessage(Endpoints.TIME, data);
-        }
-
-        /// <summary> Send a malformed ping (to trigger a LOGS response)
-        /// </summary>
-        public void BadPing()
-        {
-            byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
-            sendMessage(Endpoints.PING, cookie);
-        }
-
-        /// <summary> Get the Pebble's version info.  
-        /// </summary>
-        /// <param name="async">If true, return immediately.  If false, wait until the response 
-        /// has been received.</param>
-        public void GetVersion(Boolean async = false)
-        {
-            byte[] data = { 0 };
-            sendMessage(Endpoints.VERSION, data);
-            if (!async)
-            {
-                var wait = new EndpointSync<MessageReceivedEventArgs>(this, Endpoints.VERSION);
-                wait.WaitAndReturn(timeout: 5000);
             }
         }
 
-        /** Pebble message event handlers **/
+        #endregion
+
+        /// <summary> Send a message to the connected Pebble.  
+        /// The payload should at most be 2048 bytes large.
+        /// </summary>
+        /// <remarks>
+        /// Yes, the docs at developers.getpebble.com say 4 kB.  I've received some errors from the Pebble that indicated 2 kB
+        /// and that's what I'll assume for the time being.
+        /// </remarks>
+        /// <param name="endpoint"></param>
+        /// <param name="payload"></param>
+        /// <exception cref="ArgumentOutOfRangeException">Passed on when the payload is too large.</exception>
+        void sendMessage(Endpoints endpoint, byte[] payload)
+        {
+            try
+            {
+                pebbleProt.sendMessage((ushort)endpoint, payload);
+            }
+            catch (TimeoutException e)
+            {
+                Alive = false;
+            }
+        }
+
+        #region Pebble message event handlers
 
         void pebbleProt_RawMessageReceived(object sender, RawMessageReceivedEventArgs e)
         {
@@ -556,6 +606,26 @@ namespace flint
             this.RecoveryFirmware = Pebble.ParseVersion(e.Payload.Skip(48).Take(47).ToArray());
         }
 
+        void PhoneVersionReceived(object sender, MessageReceivedEventArgs e)
+        {
+            byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
+            byte[] session = BitConverter.GetBytes(sessionCaps);
+            byte[] remote = BitConverter.GetBytes(remoteCaps);
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(session);
+                Array.Reverse(remote);
+            }
+
+            byte[] msg = new byte[0];
+            msg = msg.Concat(prefix).Concat(session).Concat(remote).ToArray();
+            sendMessage(Endpoints.PHONE_VERSION, msg);
+        }
+
+        #endregion
+
+        #region Utility stuff
+
         static FirmwareVersion ParseVersion(byte[] data)
         {
             /*
@@ -583,44 +653,6 @@ namespace flint
             return new FirmwareVersion(timestamp, version, commit, is_recovery, hardware_platform, metadata_ver);
         }
 
-        void PhoneVersionReceived(object sender, MessageReceivedEventArgs e)
-        {
-            byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
-            byte[] session = BitConverter.GetBytes(sessionCaps);
-            byte[] remote = BitConverter.GetBytes(remoteCaps);
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(session);
-                Array.Reverse(remote);
-            }
-
-            byte[] msg = new byte[0];
-            msg = msg.Concat(prefix).Concat(session).Concat(remote).ToArray();
-            sendMessage(Endpoints.PHONE_VERSION, msg);
-        }
-
-        /// <summary> Send a message to the connected Pebble.  
-        /// The payload should at most be 2048 bytes large.
-        /// </summary>
-        /// <remarks>
-        /// Yes, the docs at developers.getpebble.com say 4 kB.  I've received some errors from the Pebble that indicated 2 kB
-        /// and that's what I'll assume for the time being.
-        /// </remarks>
-        /// <param name="endpoint"></param>
-        /// <param name="payload"></param>
-        /// <exception cref="ArgumentOutOfRangeException">Passed on when the payload is too large.</exception>
-        void sendMessage(Endpoints endpoint, byte[] payload)
-        {
-            try
-            {
-                pebbleProt.sendMessage((ushort)endpoint, payload);
-            }
-            catch (TimeoutException e)
-            {
-                Alive = false;
-            }
-        }
-
         /// <summary> Convert a Unix timestamp to a DateTime object.
         /// </summary>
         /// <remarks>
@@ -639,5 +671,7 @@ namespace flint
         {
             return string.Format("Pebble {0} on {1}", PebbleID, Port);
         }
+
+        #endregion
     }
 }

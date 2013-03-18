@@ -70,7 +70,7 @@ namespace flint_test
             menu.Add(() => pebble.NotificationSMS("+3278051200", "It's time."), "Send an SMS notification");
             menu.Add(() => pebble.NotificationMail("Your pal", "URGENT NOTICE", "There is a thing you need to do. Urgently."),
                 "Send an email notification");
-            menu.Add(() => pebble.NowPlaying("That dude", "That record", "That track"), "Send some metadata to the music app");
+            menu.Add(() => pebble.SetNowPlaying("That dude", "That record", "That track"), "Send some metadata to the music app");
             menu.Add(() => pebble.BadPing(), "Send a bad ping to trigger a LOGS response");
             menu.Add(() => Console.WriteLine(pebble.GetTime().Time), "Get the time from the Pebble");
             menu.Add(() => pebble.SetTime(DateTime.Now), "Sync Pebble time");
