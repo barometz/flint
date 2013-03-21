@@ -547,7 +547,7 @@ namespace flint
             }
             catch (TimeoutException e)
             {
-                Alive = false;
+                Disconnect();
             }
         }
 
