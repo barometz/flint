@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint", "flint\flint.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint-test", "flint-test\flint-test.csproj", "{9B8D1C0B-D406-4E0A-9F00-254339E32642}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint-bundletest", "flint-bundletest\flint-bundletest.csproj", "{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,12 @@ Global
 		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Docs|Any CPU.Build.0 = Docs|Any CPU
 		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Docs|Any CPU.ActiveCfg = Debug|Any CPU
+		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Docs|Any CPU.Build.0 = Debug|Any CPU
+		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
