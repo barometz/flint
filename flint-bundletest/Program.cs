@@ -12,7 +12,7 @@ namespace flint_bundletest
         static void Main(string[] args)
         {
             var bundle = new PebbleBundle("demo.pbw");
-            Console.WriteLine(bundle.Application);
+            Console.WriteLine(bundle);
             Console.ReadLine();
 
         }

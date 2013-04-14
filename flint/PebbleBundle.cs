@@ -27,28 +27,36 @@ namespace flint
             }
             [DataMember(Name = "manifestVersion")]
             public readonly int ManifestVersion;
+            
             [DataMember(Name="generatedAt")]
             private int GeneratedAtTS;
+            
             /// <summary> The date and time at which this bundle was generated. </summary>
             public DateTime GeneratedAt { get { return Pebble.TimestampToDateTime(GeneratedAtTS); } }
+            
             /// <summary> Name of the machine on which this bundle was generated. </summary>
             [DataMember(Name = "generatedBy")]
             public readonly String GeneratedBy;
+            
             /// <summary> The manifest for the application contained in this bundle. </summary>
             [DataMember(Name = "application")]
             public readonly ApplicationManifest Application;
         }
 
-        /// <summary> Maps to the metadata as extracted from the application binary. </summary>
+        /// <summary> Maps to the metadata as stored at the start of the application binary. </summary>
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack=1)]
         public struct ApplicationMetadata
         {
             /// <summary> Gets a string representation of the application version. </summary>
             public String AppVersion { get { return String.Format("{0}.{1}", AppMajorVersion, AppMinorVersion); } }
+            
             /// <summary> Gets a string representation of the SDK version used to produce this application. </summary>
             public String SDKVersion { get { return String.Format("{0}.{1}", SDKMajorVersion, SDKMinorVersion); } }
+            
             /// <summary> Gets a string representation of the metadata version. </summary>
             public String StructVersion { get { return String.Format("{0}.{1}", StructMajorVersion, StructMinorVersion); } }
+            
+            // The data as stored in the binary
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst=8)]
             public readonly String header;
             [MarshalAs(UnmanagedType.U1)]
@@ -88,37 +96,49 @@ namespace flint
 
             public override string ToString()
             {
-                return String.Format("{0}, version {1}.{2} by {3}", AppName, AppMajorVersion, AppMinorVersion, CompanyName);
+                String format = "{0}, version {1}.{2} by {3}";
+                return String.Format(format, AppName, AppMajorVersion, AppMinorVersion, CompanyName);
             }
         }
-
+        /// <summary> The filename. </summary>
         public String Filename { get { return Path.GetFileName(FullPath); } }
+        /// <summary> The full path to the file. </summary>
         public String FullPath { get; private set; }
         public ApplicationMetadata Application { get; private set; }
         
         ZipArchive Archive;
         BundleManifest Manifest;
         
+        /// <summary>
+        /// Create a new PebbleBundle from a .pwb file and parse its metadata.
+        /// </summary>
+        /// <param name="path">The relative or full path to the file.</param>
         public PebbleBundle(String path)
         {
-            FullPath = path;
-            FileStream stream = new FileStream(path, FileMode.Open);
-            Archive = new ZipArchive(stream, ZipArchiveMode.Read);
+            FullPath = Path.GetFullPath(path);
+            Archive = new ZipArchive(new FileStream(path, FileMode.Open, FileAccess.Read), ZipArchiveMode.Read);
+            
             ZipArchiveEntry jsonentry = Archive.GetEntry("manifest.json");
             if (jsonentry == null)
             {
-                throw new ArgumentException("manifest.json not found");
+                throw new ArgumentException("manifest.json not found in archive");
             }
             var serializer = new DataContractJsonSerializer(typeof(BundleManifest));
             Manifest = serializer.ReadObject(jsonentry.Open()) as BundleManifest;
+            
             ZipArchiveEntry binentry = Archive.GetEntry(Manifest.Application.Filename);
             if (binentry == null)
             {
-                throw new ArgumentException(String.Format("App file {0} not found", Manifest.Application.Filename));
+                throw new ArgumentException(String.Format("App file {0} not found in archive", 
+                    Manifest.Application.Filename));
             }
             ReadApplicationMetadata(binentry.Open());
         }
 
+        /// <summary>
+        /// Loads application metadata from the provided file stream (typically a .bin file inside the .pwb)
+        /// </summary>
+        /// <param name="fs"></param>
         private void ReadApplicationMetadata(Stream fs)
         {
             // Borrowed from http://stackoverflow.com/a/1936208 because BitConverter-ing all of this would be a pain
@@ -127,12 +147,19 @@ namespace flint
             GCHandle hdl = GCHandle.Alloc(buffer, GCHandleType.Pinned);
             try
             {
-                Application = (ApplicationMetadata)Marshal.PtrToStructure(hdl.AddrOfPinnedObject(), typeof(ApplicationMetadata));
+                Application = (ApplicationMetadata)Marshal.PtrToStructure(hdl.AddrOfPinnedObject(), 
+                    typeof(ApplicationMetadata));
             }
             finally
             {
                 hdl.Free();
             }
+        }
+
+        public override string ToString()
+        {
+            String format = "{0} from {1}";
+            return String.Format(format, Application, Filename);
         }
     }
 }
