@@ -36,7 +36,7 @@ namespace flint
             NOTIFICATION = 3000,
             SYS_REG = 5000,
             FCT_REG = 5001,
-            APP_INSTALL_MANAGER = 6000,
+            APP_MANAGER = 6000,
             RUNKEEPER = 7000,
             PUT_BYTES = 48879,
             MAX_ENDPOINT = 65535
@@ -132,6 +132,8 @@ namespace flint
         public event EventHandler<PingReceivedEventArgs> PingReceived;
         /// <summary> Received a music control message (next/prev/playpause) from the Pebble. </summary>
         public event EventHandler<MediaControlReceivedEventArgs> MediaControlReceived;
+
+        public event EventHandler<AppbankContentsReceivedEventArgs> AppbankContentsReceived;
         /// <summary> Holds callbacks for the separate endpoints.  
         /// Saves a lot of typing. There's probably a good reason not to do this.
         /// </summary>
@@ -182,6 +184,7 @@ namespace flint
             endpointEvents = new Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>>();
             RegisterEndpointCallback(Endpoints.PHONE_VERSION, PhoneVersionReceived);
             RegisterEndpointCallback(Endpoints.VERSION, VersionReceived);
+            RegisterEndpointCallback(Endpoints.APP_MANAGER, AppbankStatusResponseReceived);
 
             pingTimer = new System.Timers.Timer(16180);
             pingTimer.Elapsed += pingTimer_Elapsed;
@@ -527,6 +530,20 @@ namespace flint
             }
         }
 
+        public AppbankContentsReceivedEventArgs GetAppbankContents(bool async = false)
+        {
+            sendMessage(Endpoints.APP_MANAGER, new byte[] { 1 });
+            if (!async)
+            {
+                var wait = new EndpointSync<AppbankContentsReceivedEventArgs>(this, Endpoints.APP_MANAGER);
+                return wait.WaitAndReturn();
+            }
+            else
+            {
+                return null;
+            }
+        }
+
         #endregion
 
         /// <summary> Send a message to the connected Pebble.  
@@ -622,6 +639,18 @@ namespace flint
             sendMessage(Endpoints.PHONE_VERSION, msg);
         }
 
+        private void AppbankStatusResponseReceived(object sender, MessageReceivedEventArgs e)
+        {
+            if (e.Payload[0] == 1)
+            {
+                EventHandler<AppbankContentsReceivedEventArgs> h = AppbankContentsReceived;
+                if (h != null)
+                {
+                    h(this, new AppbankContentsReceivedEventArgs(e.Payload));
+                }
+            }
+        }
+
         #endregion
 
         #region Utility stuff
@@ -642,7 +671,7 @@ namespace flint
             {
                 Array.Reverse(_ts);
             }
-            DateTime timestamp = Pebble.TimestampToDateTime(BitConverter.ToInt32(_ts, 0));
+            DateTime timestamp = Util.TimestampToDateTime(BitConverter.ToInt32(_ts, 0));
             String version = Encoding.UTF8.GetString(data.Skip(4).Take(32).ToArray());
             String commit = Encoding.UTF8.GetString(data.Skip(36).Take(8).ToArray());
             version = version.Substring(0, version.IndexOf('\0'));
@@ -651,20 +680,6 @@ namespace flint
             byte hardware_platform = data[45];
             byte metadata_ver = data[46];
             return new FirmwareVersion(timestamp, version, commit, is_recovery, hardware_platform, metadata_ver);
-        }
-
-        /// <summary> Convert a Unix timestamp to a DateTime object.
-        /// </summary>
-        /// <remarks>
-        /// This has some issues, as Pebble isn't timezone-aware and it's 
-        /// unclear how either side deals with leap seconds.  For basic usage
-        /// this should be plenty, though.
-        /// </remarks>
-        /// <param name="ts"></param>
-        /// <returns></returns>
-        public static DateTime TimestampToDateTime(Int32 ts)
-        {
-            return new DateTime(1970, 1, 1).AddSeconds(ts);
         }
 
         public override string ToString()

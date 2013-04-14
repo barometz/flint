@@ -32,7 +32,7 @@ namespace flint
             private int GeneratedAtTS;
             
             /// <summary> The date and time at which this bundle was generated. </summary>
-            public DateTime GeneratedAt { get { return Pebble.TimestampToDateTime(GeneratedAtTS); } }
+            public DateTime GeneratedAt { get { return Util.TimestampToDateTime(GeneratedAtTS); } }
             
             /// <summary> Name of the machine on which this bundle was generated. </summary>
             [DataMember(Name = "generatedBy")]
@@ -132,29 +132,10 @@ namespace flint
                 throw new ArgumentException(String.Format("App file {0} not found in archive", 
                     Manifest.Application.Filename));
             }
-            ReadApplicationMetadata(binentry.Open());
+            Application = Util.ReadStruct<ApplicationMetadata>(binentry.Open());
         }
 
-        /// <summary>
-        /// Loads application metadata from the provided file stream (typically a .bin file inside the .pwb)
-        /// </summary>
-        /// <param name="fs"></param>
-        private void ReadApplicationMetadata(Stream fs)
-        {
-            // Borrowed from http://stackoverflow.com/a/1936208 because BitConverter-ing all of this would be a pain
-            byte[] buffer = new byte[Marshal.SizeOf(typeof(ApplicationMetadata))];
-            fs.Read(buffer, 0, buffer.Length);
-            GCHandle hdl = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-            try
-            {
-                Application = (ApplicationMetadata)Marshal.PtrToStructure(hdl.AddrOfPinnedObject(), 
-                    typeof(ApplicationMetadata));
-            }
-            finally
-            {
-                hdl.Free();
-            }
-        }
+
 
         public override string ToString()
         {

@@ -44,7 +44,7 @@ namespace flint
             }
             
             int timestamp = BitConverter.ToInt32(Payload, 1);
-            Time = Pebble.TimestampToDateTime(timestamp);
+            Time = Util.TimestampToDateTime(timestamp);
         }
 
         /// <summary> Create a new TimeReceivedEventArgs.
@@ -107,14 +107,14 @@ namespace flint
             if (BitConverter.IsLittleEndian)
             {
                 Array.Reverse(metadata);
-                Timestamp = Pebble.TimestampToDateTime(BitConverter.ToInt32(metadata, 4));
+                Timestamp = Util.TimestampToDateTime(BitConverter.ToInt32(metadata, 4));
                 Level = metadata[3];
                 msgsize = metadata[2];
                 LineNo = BitConverter.ToInt16(metadata, 0);
             }
             else
             {
-                Timestamp = Pebble.TimestampToDateTime(BitConverter.ToInt32(metadata, 0));
+                Timestamp = Util.TimestampToDateTime(BitConverter.ToInt32(metadata, 0));
                 Level = metadata[4];
                 msgsize = metadata[5];
                 LineNo = BitConverter.ToInt16(metadata, 6);
@@ -166,6 +166,23 @@ namespace flint
             : this(Pebble.Endpoints.MUSIC_CONTROL, payload)
         {
         }
+    }
 
+    /// <summary>
+    /// Event args for when the contents of the Pebble's app bank have been received.
+    /// </summary>
+    public class AppbankContentsReceivedEventArgs : MessageReceivedEventArgs
+    {
+        public AppBank AppBank { get; private set; }
+        public AppbankContentsReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
+            : base(endpoint, payload)
+        {
+            AppBank = new AppBank(payload);
+        }
+
+        public AppbankContentsReceivedEventArgs(byte[] payload)
+            : this(Pebble.Endpoints.APP_MANAGER, payload)
+        {
+        }
     }
 }

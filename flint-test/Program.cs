@@ -74,6 +74,7 @@ namespace flint_test
             menu.Add(() => pebble.BadPing(), "Send a bad ping to trigger a LOGS response");
             menu.Add(() => Console.WriteLine(pebble.GetTime().Time), "Get the time from the Pebble");
             menu.Add(() => pebble.SetTime(DateTime.Now), "Sync Pebble time");
+            menu.Add(() => Console.WriteLine(pebble.GetAppbankContents().AppBank), "Get the contents of the app bank");
             menu.Add(() => pebble.Disconnect(), "Exit");
 
             pebble.OnDisconnect += pebble_OnDisconnect;
