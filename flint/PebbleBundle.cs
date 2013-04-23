@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+
+using Ionic.Zip;
 
 namespace flint
 {
@@ -105,8 +106,8 @@ namespace flint
         /// <summary> The full path to the file. </summary>
         public String FullPath { get; private set; }
         public ApplicationMetadata Application { get; private set; }
-        
-        ZipArchive Archive;
+
+        ZipFile Bundle;
         BundleManifest Manifest;
         
         /// <summary>
@@ -115,24 +116,35 @@ namespace flint
         /// <param name="path">The relative or full path to the file.</param>
         public PebbleBundle(String path)
         {
+            Stream jsonstream;
+            Stream binstream;
+            
             FullPath = Path.GetFullPath(path);
-            Archive = new ZipArchive(new FileStream(path, FileMode.Open, FileAccess.Read), ZipArchiveMode.Read);
-            
-            ZipArchiveEntry jsonentry = Archive.GetEntry("manifest.json");
-            if (jsonentry == null)
+            Bundle = ZipFile.Read(FullPath);
+
+            if (Bundle.ContainsEntry("manifest.json"))
             {
-                throw new ArgumentException("manifest.json not found in archive");
+                jsonstream = Bundle["manifest.json"].OpenReader();
             }
+            else
+            {
+                throw new ArgumentException("manifest.json not found in archive - not a Pebble bundle.");
+            }
+
             var serializer = new DataContractJsonSerializer(typeof(BundleManifest));
-            Manifest = serializer.ReadObject(jsonentry.Open()) as BundleManifest;
-            
-            ZipArchiveEntry binentry = Archive.GetEntry(Manifest.Application.Filename);
-            if (binentry == null)
+            Manifest = serializer.ReadObject(jsonstream) as BundleManifest;
+
+            if (Bundle.ContainsEntry(Manifest.Application.Filename))
             {
-                throw new ArgumentException(String.Format("App file {0} not found in archive", 
-                    Manifest.Application.Filename));
+                binstream = Bundle[Manifest.Application.Filename].OpenReader();
             }
-            Application = Util.ReadStruct<ApplicationMetadata>(binentry.Open());
+            else
+            {
+                String format = "App file {0} not found in archive";
+                throw new ArgumentException(String.Format(format, Manifest.Application.Filename));
+            }
+
+            Application = Util.ReadStruct<ApplicationMetadata>(binstream);
         }
 
 
