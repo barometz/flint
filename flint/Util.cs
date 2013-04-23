@@ -54,5 +54,46 @@ namespace flint
         {
             return new DateTime(1970, 1, 1).AddSeconds(ts);
         }
+
+        static uint CRC32_ProcessWord(uint data, uint crc)
+        {
+            // Crudely ported from https://github.com/pebble/libpebble/blob/master/pebble/stm32_crc.py
+            uint poly = 0x04C11DB7;
+            crc = crc ^ data;
+            for (int i = 0; i < 32; i++)
+            {
+                if ((crc & 0x80000000) != 0)
+                {
+                    crc = (crc << 1) ^ poly;
+                }
+                else
+                {
+                    crc = (crc << 1);
+                }
+            }
+            return crc;
+        }
+
+        /// <summary>
+        /// CRC32 function that uses the same parameters etc as Pebble's hardware implementation.
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public static uint CRC32(byte[] data)
+        {
+            if (data.Count() % 4 != 0)
+            {
+                int padsize = 4 - data.Count() % 4;
+                data = data.Concat(new byte[padsize]).ToArray();
+            }
+            uint crc = 0xFFFFFFFF;
+            for (int i = 0; i < data.Count(); i += 4)
+            {
+                uint currentword = BitConverter.ToUInt32(data, i);
+                crc = CRC32_ProcessWord(currentword, crc);
+            }
+            return crc;
+        }
+
     }
 }

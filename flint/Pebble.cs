@@ -52,6 +52,15 @@ namespace flint
             Other = 8
         }
 
+        public enum PutBytesTypes : byte
+        {
+            Firmware = 1,
+            Recovery = 2,
+            SystemResources = 3,
+            Resources = 4,
+            Binary = 5
+        }
+
         /* Capabilities information gratefully taken from 
          * https://github.com/bldewolf/libpebble/commit/ca3c335aef3bdb5914b1b4fcd63701baea9de848
          */
@@ -167,6 +176,8 @@ namespace flint
         uint remoteCaps = (uint)(RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID);
 
         System.Timers.Timer pingTimer;
+
+        byte[] putBytesBuffer = { };
 
         /// <summary> Create a new Pebble 
         /// </summary>
@@ -489,6 +500,18 @@ namespace flint
         {
             byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
             sendMessage(Endpoints.PING, cookie);
+        }
+
+        public void PutBytes(byte[] data, PutBytesTypes type)
+        {
+            if (putBytesBuffer.Count() != 0)
+            {
+                // Probably not the best way to handle this, should look up mutex locks or somesuch.
+                throw new InvalidOperationException("PUTBYTES operation in progress.");
+            }
+            putBytesBuffer = new byte[data.Count()];
+            data.CopyTo(putBytesBuffer, 0);
+
         }
 
         #endregion
