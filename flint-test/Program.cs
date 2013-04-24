@@ -75,6 +75,7 @@ namespace flint_test
             menu.Add(() => Console.WriteLine(pebble.GetTime().Time), "Get the time from the Pebble");
             menu.Add(() => pebble.SetTime(DateTime.Now), "Sync Pebble time");
             menu.Add(() => Console.WriteLine(pebble.GetAppbankContents().AppBank), "Get the contents of the app bank");
+            menu.Add(() => DeleteApp(pebble), "Delete an app from the Pebble");
             menu.Add(() => pebble.Disconnect(), "Exit");
 
             pebble.OnDisconnect += pebble_OnDisconnect;
@@ -98,6 +99,15 @@ namespace flint_test
                 // To account for disconnects during the prompt:
                 if (pebble.Alive) act();
             }
+        }
+
+        static void DeleteApp(Pebble pebble)
+        {
+            var applist = pebble.GetAppbankContents().AppBank.Apps;
+            Console.WriteLine("Choose an app to remove");
+            AppBank.App result = SharpMenu<AppBank.App>.WriteAndPrompt(applist);
+            AppbankInstallMessageEventArgs ev = pebble.RemoveApp(result);
+            Console.WriteLine(ev.MsgType);
         }
 
         static void pebble_OnDisconnect(object sender, EventArgs e)

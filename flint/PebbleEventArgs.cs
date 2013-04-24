@@ -177,7 +177,7 @@ namespace flint
         public AppbankContentsReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
             : base(endpoint, payload)
         {
-            AppBank = new AppBank(payload);
+            AppBank = new AppBank(Payload);
         }
 
         public AppbankContentsReceivedEventArgs(byte[] payload)
@@ -185,4 +185,33 @@ namespace flint
         {
         }
     }
+
+    public class AppbankInstallMessageEventArgs : MessageReceivedEventArgs
+    {
+        public enum MessageType
+        {
+            Available,
+            Removed,
+            Updated
+        }
+
+        public MessageType MsgType { get; private set; }
+
+        public AppbankInstallMessageEventArgs(Pebble.Endpoints endpoint, byte[] payload)
+            : base(endpoint, payload)
+        {
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(Payload, 1, 4);
+            }
+            uint result = BitConverter.ToUInt32(Payload, 1);
+            MsgType = (MessageType)result; 
+        }
+
+        public AppbankInstallMessageEventArgs(byte[] payload)
+            : this(Pebble.Endpoints.APP_MANAGER, payload)
+        {
+        }
+    }
+
 }

@@ -143,6 +143,7 @@ namespace flint
         public event EventHandler<MediaControlReceivedEventArgs> MediaControlReceived;
 
         public event EventHandler<AppbankContentsReceivedEventArgs> AppbankContentsReceived;
+        public event EventHandler<AppbankInstallMessageEventArgs> AppbankInstallMessage;
         /// <summary> Holds callbacks for the separate endpoints.  
         /// Saves a lot of typing. There's probably a good reason not to do this.
         /// </summary>
@@ -553,12 +554,48 @@ namespace flint
             }
         }
 
+        /// <summary>
+        /// Fetch the contents of the Appbank.
+        /// </summary>
+        /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
+        /// the appropriate AppbankContentsReceivedEventArgs.</param>
+        /// <returns></returns>
         public AppbankContentsReceivedEventArgs GetAppbankContents(bool async = false)
         {
             sendMessage(Endpoints.APP_MANAGER, new byte[] { 1 });
             if (!async)
             {
                 var wait = new EndpointSync<AppbankContentsReceivedEventArgs>(this, Endpoints.APP_MANAGER);
+                return wait.WaitAndReturn();
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Remove an app from the Pebble, using an App instance retrieved from the Appbank.
+        /// </summary>
+        /// <param name="app"></param>
+        /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
+        /// the appropriate AppbankInstallMessageEventArgs.</param>
+        /// <returns></returns>
+        public AppbankInstallMessageEventArgs RemoveApp(AppBank.App app, bool async = false)
+        {
+            byte[] msg = new byte[1];
+            msg[0] = 2;
+            msg = msg.Concat(BitConverter.GetBytes(app.ID)).ToArray();
+            msg = msg.Concat(BitConverter.GetBytes(app.Index)).ToArray();
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(msg, 1, 4);
+                Array.Reverse(msg, 5, 4);
+            }
+            sendMessage(Endpoints.APP_MANAGER, msg);
+            if (!async)
+            {
+                var wait = new EndpointSync<AppbankInstallMessageEventArgs>(this, Endpoints.APP_MANAGER);
                 return wait.WaitAndReturn();
             }
             else
@@ -664,13 +701,22 @@ namespace flint
 
         private void AppbankStatusResponseReceived(object sender, MessageReceivedEventArgs e)
         {
-            if (e.Payload[0] == 1)
+            switch (e.Payload[0])
             {
-                EventHandler<AppbankContentsReceivedEventArgs> h = AppbankContentsReceived;
-                if (h != null)
-                {
-                    h(this, new AppbankContentsReceivedEventArgs(e.Payload));
-                }
+                case 1:
+                    EventHandler<AppbankContentsReceivedEventArgs> h = AppbankContentsReceived;
+                    if (h != null)
+                    {
+                        h(this, new AppbankContentsReceivedEventArgs(e.Payload));
+                    }
+                    break;
+                case 2:
+                    EventHandler<AppbankInstallMessageEventArgs> ih = AppbankInstallMessage;
+                    if (ih != null)
+                    {
+                        ih(this, new AppbankInstallMessageEventArgs(e.Payload));
+                    }
+                    break;
             }
         }
 
