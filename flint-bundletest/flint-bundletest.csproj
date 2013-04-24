@@ -50,6 +50,9 @@
     <None Include="demo.pbw">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="normal_ev2_4_v1.10.0.pbz">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\flint\flint.csproj">

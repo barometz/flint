@@ -69,6 +69,7 @@
     <Compile Include="PebbleException.cs" />
     <Compile Include="PebbleProtocol.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PutBytes.cs" />
     <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -12,7 +12,7 @@ namespace flint
     /// PebbleProtocol is blissfully unaware of the *meaning* of anything, 
     /// all that is handled here.
     /// </summary>
-    public class Pebble
+    public partial class Pebble
     {
         // TODO: Exception handling.
 
@@ -50,15 +50,6 @@ namespace flint
             Previous = 5,
             // PlayPause also sends 8 for some reason.  To be figured out.
             Other = 8
-        }
-
-        public enum PutBytesTypes : byte
-        {
-            Firmware = 1,
-            Recovery = 2,
-            SystemResources = 3,
-            Resources = 4,
-            Binary = 5
         }
 
         /* Capabilities information gratefully taken from 
@@ -178,7 +169,7 @@ namespace flint
 
         System.Timers.Timer pingTimer;
 
-        byte[] putBytesBuffer = { };
+        
 
         /// <summary> Create a new Pebble 
         /// </summary>
@@ -197,6 +188,7 @@ namespace flint
             RegisterEndpointCallback(Endpoints.PHONE_VERSION, PhoneVersionReceived);
             RegisterEndpointCallback(Endpoints.VERSION, VersionReceived);
             RegisterEndpointCallback(Endpoints.APP_MANAGER, AppbankStatusResponseReceived);
+            RegisterEndpointCallback(Endpoints.PUT_BYTES, PutBytesReceived);
 
             pingTimer = new System.Timers.Timer(16180);
             pingTimer.Elapsed += pingTimer_Elapsed;
@@ -501,18 +493,6 @@ namespace flint
         {
             byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
             sendMessage(Endpoints.PING, cookie);
-        }
-
-        public void PutBytes(byte[] data, PutBytesTypes type)
-        {
-            if (putBytesBuffer.Count() != 0)
-            {
-                // Probably not the best way to handle this, should look up mutex locks or somesuch.
-                throw new InvalidOperationException("PUTBYTES operation in progress.");
-            }
-            putBytesBuffer = new byte[data.Count()];
-            data.CopyTo(putBytesBuffer, 0);
-
         }
 
         #endregion
