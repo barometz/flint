@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace flint
 {
@@ -23,9 +22,9 @@ namespace flint
             [MarshalAs(UnmanagedType.U4)]
             public readonly int Index;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-            public readonly String Name;
+            public readonly string Name;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-            public readonly String Company;
+            public readonly string Company;
             [MarshalAs(UnmanagedType.U4)]
             public readonly int Flags;
             [MarshalAs(UnmanagedType.U1)]
@@ -33,14 +32,13 @@ namespace flint
             [MarshalAs(UnmanagedType.U1)]
             public readonly byte MinorVersion;
             /// <summary> A string representation of the app version. </summary>
-            public String Version { get { return String.Format("{0}.{1}", MajorVersion, MinorVersion); } }
+            public string Version { get { return String.Format("{0}.{1}", MajorVersion, MinorVersion); } }
 
             public override string ToString()
             {
-                String format = "{0}, version {1} by {2}";
+                const string format = "{0}, version {1} by {2}";
                 return String.Format(format, Name, Version, Company);
             }
-
         }
         /// <summary> The number of available (free and occupied) app slots (?) </summary>
         public uint Size { get; private set; }
@@ -53,10 +51,10 @@ namespace flint
         /// <param name="bytes">The entire payload from an appropriate APP_MANAGER message.</param>
         public AppBank(byte[] bytes)
         {
-            int headersize = 9;
-            int appinfosize = 78;
+            const int headerSize = 9;
+            const int appInfoSize = 78;
             Apps = new List<App>();
-            if (bytes.Count() < headersize)
+            if (bytes.Count() < headerSize)
             {
                 throw new ArgumentOutOfRangeException("Payload is shorter than 9 bytes, "+
                     "which is the minimum size for an appbank content response.");
@@ -69,15 +67,15 @@ namespace flint
             }
             Size = BitConverter.ToUInt32(bytes, 1);
             
-            uint appcount = BitConverter.ToUInt32(bytes, 5);
-            if (bytes.Count() < headersize + appcount * appinfosize)
+            uint appCount = BitConverter.ToUInt32(bytes, 5);
+            if (bytes.Count() < headerSize + appCount * appInfoSize)
             {
                 throw new ArgumentOutOfRangeException("Payload is not large enough for the claimed number of installed apps.");
             }
 
-            for (int i = 0; i < appcount; i++)
+            for (int i = 0; i < appCount; i++)
             {
-                Apps.Add(AppFromBytes(bytes.Skip(headersize + i * appinfosize).Take(appinfosize).ToArray()));
+                Apps.Add(AppFromBytes(bytes.Skip(headerSize + i * appInfoSize).Take(appInfoSize).ToArray()));
             }
         }
 
@@ -103,13 +101,7 @@ namespace flint
 
         public override string ToString()
         {
-            String ret = "";
-            foreach (App app in Apps)
-            {
-                ret += app.ToString();
-                ret += "\n";
-            }
-            return ret;
+            return Apps.Aggregate(new StringBuilder(), ( sb, app ) => sb.AppendLine(app.ToString())).ToString();
         }
 
     }

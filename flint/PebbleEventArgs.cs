@@ -11,9 +11,9 @@ namespace flint
         public Pebble.Endpoints Endpoint { get; private set; }
         public byte[] Payload { get; private set; }
 
-        public MessageReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
+        public MessageReceivedEventArgs(Pebble.Endpoints endPoint, byte[] payload)
         {
-            Endpoint = endpoint;
+            Endpoint = endPoint;
             Payload = new byte[payload.Length];
             payload.CopyTo(Payload, 0);
         }
@@ -30,8 +30,8 @@ namespace flint
         /// <summary> Create a new TimeReceivedEventArgs.
         /// </summary>
         /// <param name="payload">Must be 5 bytes long.  The latter four are interpreted as a timestamp.</param>
-        public TimeReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
-            : base(endpoint, payload)
+        public TimeReceivedEventArgs(Pebble.Endpoints endPoint, byte[] payload)
+            : base(endPoint, payload)
         {
             if (Payload.Length != 5)
             {
@@ -64,8 +64,8 @@ namespace flint
         /// <summary> Create new eventargs for a PING. </summary>
         /// <param name="payload">The payload. Has to be five bytes long, 
         /// otherwise something's wrong.</param>
-        public PingReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
-            : base(endpoint, payload)
+        public PingReceivedEventArgs(Pebble.Endpoints endPoint, byte[] payload)
+            : base(endPoint, payload)
         {
             if (Payload.Length != 5)
             {
@@ -88,14 +88,14 @@ namespace flint
         public DateTime Timestamp { get; private set; }
         public byte Level { get; private set; }
         public Int16 LineNo { get; private set; }
-        public String Filename { get; private set; }
-        public String Message { get; private set; }
+        public string Filename { get; private set; }
+        public string Message { get; private set; }
 
-        public LogReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
-            : base(endpoint, payload)
+        public LogReceivedEventArgs(Pebble.Endpoints endPoint, byte[] payload)
+            : base(endPoint, payload)
         {
             byte[] metadata = new byte[8];
-            byte msgsize;
+            byte messageSize;
             Array.Copy(Payload, metadata, 8);
             /* 
              * Unpack the metadata.  Eight bytes:
@@ -109,21 +109,21 @@ namespace flint
                 Array.Reverse(metadata);
                 Timestamp = Util.TimestampToDateTime(BitConverter.ToInt32(metadata, 4));
                 Level = metadata[3];
-                msgsize = metadata[2];
+                messageSize = metadata[2];
                 LineNo = BitConverter.ToInt16(metadata, 0);
             }
             else
             {
                 Timestamp = Util.TimestampToDateTime(BitConverter.ToInt32(metadata, 0));
                 Level = metadata[4];
-                msgsize = metadata[5];
+                messageSize = metadata[5];
                 LineNo = BitConverter.ToInt16(metadata, 6);
             }
             // Now to extract the actual data
             byte[] _filename = new byte[16];
-            byte[] _data = new byte[msgsize];
+            byte[] _data = new byte[messageSize];
             Array.Copy(Payload, 8, _filename, 0, 16);
-            Array.Copy(Payload, 24, _data, 0, msgsize);
+            Array.Copy(Payload, 24, _data, 0, messageSize);
 
             Filename = Encoding.UTF8.GetString(_filename);
             Message = Encoding.UTF8.GetString(_data);
@@ -136,7 +136,7 @@ namespace flint
 
         public override string ToString()
         {
-            String template = "{0} {1,3} {2}:{3,3} {4}";
+            const string template = "{0} {1,3} {2}:{3,3} {4}";
             return string.Format(template, Timestamp, Level, Filename, LineNo, Message);
         }
     }
@@ -152,8 +152,8 @@ namespace flint
         /// 1 byte long.
         /// </summary>
         /// <param name="payload"></param>
-        public MediaControlReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
-            : base(endpoint, payload)
+        public MediaControlReceivedEventArgs(Pebble.Endpoints endPoint, byte[] payload)
+            : base(endPoint, payload)
         {
             Command = (Pebble.MediaControls)Payload[0];
         }
@@ -174,8 +174,8 @@ namespace flint
     public class AppbankContentsReceivedEventArgs : MessageReceivedEventArgs
     {
         public AppBank AppBank { get; private set; }
-        public AppbankContentsReceivedEventArgs(Pebble.Endpoints endpoint, byte[] payload)
-            : base(endpoint, payload)
+        public AppbankContentsReceivedEventArgs(Pebble.Endpoints endPoint, byte[] payload)
+            : base(endPoint, payload)
         {
             AppBank = new AppBank(Payload);
         }
@@ -197,8 +197,8 @@ namespace flint
 
         public MessageType MsgType { get; private set; }
 
-        public AppbankInstallMessageEventArgs(Pebble.Endpoints endpoint, byte[] payload)
-            : base(endpoint, payload)
+        public AppbankInstallMessageEventArgs(Pebble.Endpoints endPoint, byte[] payload)
+            : base(endPoint, payload)
         {
             if (BitConverter.IsLittleEndian)
             {

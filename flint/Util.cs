@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace flint
 {
@@ -83,14 +80,14 @@ namespace flint
         {
             if (data.Count() % 4 != 0)
             {
-                int padsize = 4 - data.Count() % 4;
-                data = data.Concat(new byte[padsize]).ToArray();
+                int padSize = 4 - data.Count() % 4;
+                data = data.Concat(new byte[padSize]).ToArray();
             }
             uint crc = 0xFFFFFFFF;
             for (int i = 0; i < data.Count(); i += 4)
             {
-                uint currentword = BitConverter.ToUInt32(data, i);
-                crc = CRC32_ProcessWord(currentword, crc);
+                uint currentWord = BitConverter.ToUInt32(data, i);
+                crc = CRC32_ProcessWord(currentWord, crc);
             }
             return crc;
         }

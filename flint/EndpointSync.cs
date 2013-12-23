@@ -14,18 +14,18 @@ namespace flint
     /// </remarks>
     public class EndpointSync<T> where T : MessageReceivedEventArgs
     {
-        Pebble pebble;
-        Pebble.Endpoints endpoint;
+        private readonly Pebble _Pebble;
+        private readonly Pebble.Endpoints _Endpoint;
+        private readonly ManualResetEvent _mre;
 
         public T Result { get; private set; }
-        public Boolean Triggered { get; private set; }
 
-        public EndpointSync(Pebble pebble, Pebble.Endpoints endpoint) 
+        public EndpointSync( Pebble pebble, Pebble.Endpoints endpoint )
         {
-            this.pebble = pebble;
-            this.endpoint = endpoint;
-            Triggered = false;
-            pebble.RegisterEndpointCallback(endpoint, trigger);
+            _Pebble = pebble;
+            _Endpoint = endpoint;
+            _mre = new ManualResetEvent( false );
+            pebble.RegisterEndpointCallback( endpoint, trigger );
         }
 
         /// <summary> Block until the request has returned. </summary>
@@ -33,25 +33,18 @@ namespace flint
         /// <param name="timeout">The time to wait until giving up entirely, at 
         /// which point a TimeoutException is raised.</param>
         /// <returns></returns>
-        public T WaitAndReturn(int delay = 15, int timeout = 10000)
+        public T WaitAndReturn( int timeout = 10000 )
         {
-            DateTime start = DateTime.Now;
-            while (!this.Triggered)
-            {
-                if ((DateTime.Now - start).TotalMilliseconds > timeout)
-                {
-                    throw new TimeoutException();
-                }
-                Thread.Sleep(delay);
-            }
-            return Result;
+            if ( _mre.WaitOne( timeout ) )
+                return Result;
+            throw new TimeoutException();
         }
 
-        void trigger(object sender, MessageReceivedEventArgs e)
+        private void trigger( object sender, MessageReceivedEventArgs e )
         {
-            pebble.DeregisterEndpointCallback(endpoint, trigger);
-            Result = (T)Activator.CreateInstance(typeof(T), endpoint, e.Payload);
-            Triggered = true;
+            _Pebble.DeregisterEndpointCallback( _Endpoint, trigger );
+            Result = (T)Activator.CreateInstance( typeof( T ), _Endpoint, e.Payload );
+            _mre.Set();
         }
     }
 }

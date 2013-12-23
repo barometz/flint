@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace flint
 {
@@ -16,7 +14,7 @@ namespace flint
             Binary = 5
         }
 
-        enum PutBytesState
+        private enum PutBytesState
         {
             NotStarted,
             WaitForToken,
@@ -27,9 +25,8 @@ namespace flint
         }
 
         byte[] putBytesBuffer = { };
-        PutBytesState putBytesState = PutBytesState.NotStarted;
+        private const PutBytesState putBytesState = PutBytesState.NotStarted;
 
-        
 
         void PutBytes(byte[] data, int index, PutBytesType type)
         {
