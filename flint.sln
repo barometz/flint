@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint-test", "flint-test\fl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint-bundletest", "flint-bundletest\flint-bundletest.csproj", "{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Windows.Pebble", "Windows.Pebble\Windows.Pebble.csproj", "{2126E467-E82B-4C28-842D-64EABD67282F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,12 @@ Global
 		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Docs|Any CPU.Build.0 = Debug|Any CPU
 		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2126E467-E82B-4C28-842D-64EABD67282F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2126E467-E82B-4C28-842D-64EABD67282F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2126E467-E82B-4C28-842D-64EABD67282F}.Docs|Any CPU.ActiveCfg = Debug|Any CPU
+		{2126E467-E82B-4C28-842D-64EABD67282F}.Docs|Any CPU.Build.0 = Debug|Any CPU
+		{2126E467-E82B-4C28-842D-64EABD67282F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2126E467-E82B-4C28-842D-64EABD67282F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

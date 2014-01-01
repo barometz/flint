@@ -1,9 +1,13 @@
-﻿using InTheHand.Net.Sockets;
+﻿using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
+using InTheHand.Net.Sockets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Text;
+using Ionic.Zip;
 
 namespace flint
 {
@@ -11,7 +15,7 @@ namespace flint
     /// PebbleProtocol is blissfully unaware of the *meaning* of anything, 
     /// all that is handled here.
     /// </summary>
-    public partial class Pebble
+    public class Pebble
     {
         // TODO: Exception handling.
 
@@ -20,25 +24,25 @@ namespace flint
         /// </summary>
         public enum Endpoints : ushort
         {
-            FIRMWARE = 1,
-            TIME = 11,
-            VERSION = 16,
-            PHONE_VERSION = 17,
-            SYSTEM_MESSAGE = 18,
-            MUSIC_CONTROL = 32,
-            PHONE_CONTROL = 33,
-            LOGS = 2000,
-            PING = 2001,
-            DRAW = 2002,
-            RESET = 2003,
-            APPMFG = 2004,
-            NOTIFICATION = 3000,
-            SYS_REG = 5000,
-            FCT_REG = 5001,
-            APP_MANAGER = 6000,
-            RUNKEEPER = 7000,
-            PUT_BYTES = 48879,
-            MAX_ENDPOINT = 65535
+            Firmware = 1,
+            Time = 11,
+            Version = 16,
+            PhoneVersion = 17,
+            SystemMessage = 18,
+            MusicControl = 32,
+            PhoneControl = 33,
+            Logs = 2000,
+            Ping = 2001,
+            Draw = 2002,
+            Reset = 2003,
+            Appmfg = 2004,
+            Notification = 3000,
+            SysReg = 5000,
+            FctReg = 5001,
+            AppManager = 6000,
+            RunKeeper = 7000,
+            PutBytes = 48879,
+            MaxEndpoint = 65535
         }
 
         /// <summary> Media control instructions as understood by Pebble </summary>
@@ -81,34 +85,13 @@ namespace flint
             COMPASS = 2048
         }
 
-        public class FirmwareVersion
+        private enum TransferType : byte
         {
-            public DateTime Timestamp { get; private set; }
-            public string Version { get; private set; }
-            public string Commit { get; private set; }
-            public Boolean IsRecovery { get; private set; }
-            public byte HardwarePlatform { get; private set; }
-            public byte MetadataVersion { get; private set; }
-
-            public FirmwareVersion(DateTime timestamp, string version, string commit,
-                bool isRecovery, byte hardwarePlatform, byte metadataVersion)
-            {
-                Timestamp = timestamp;
-                Version = version;
-                Commit = commit;
-                IsRecovery = isRecovery;
-                HardwarePlatform = hardwarePlatform;
-                MetadataVersion = metadataVersion;
-            }
-
-            public override string ToString()
-            {
-                const string format = "Version {0}, commit {1} ({2})\n"
-                                      + "Recovery:         {3}\n"
-                                      + "HW Platform:      {4}\n"
-                                      + "Metadata version: {5}";
-                return String.Format(format, Version, Commit, Timestamp, IsRecovery, HardwarePlatform, MetadataVersion);
-            }
+            Firmware = 1,
+            Recovery = 2,
+            SysResources = 3,
+            Resources = 4,
+            Binary = 5
         }
 
         /// <summary> Occurs when the Pebble (is considered to have) disconnected, 
@@ -163,33 +146,32 @@ namespace flint
 
         private readonly PebbleProtocol _PebbleProt;
         private uint _SessionCaps = (uint)SessionCaps.GAMMA_RAY;
-        private uint _RemoteCaps = (uint)(RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID);
+        private uint _RemoteCaps = (uint)( RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID );
 
         private readonly System.Timers.Timer _PingTimer;
 
-        
+
 
         /// <summary> Create a new Pebble 
         /// </summary>
         /// <param name="port">The serial port to connect to.</param>
         /// <param name="pebbleId">The four-character Pebble ID, based on its BT address.  
         /// Nothing explodes when it's incorrect, it's merely used for identification.</param>
-        public Pebble(string port, string pebbleId)
+        public Pebble( string port, string pebbleId )
         {
             Alive = false;
             PingTimeout = 10000;
             PebbleID = pebbleId;
-            _PebbleProt = new PebbleProtocol(port);
-            _PebbleProt.RawMessageReceived += pebbleProt_RawMessageReceived;
+            _PebbleProt = new PebbleProtocol( port );
+            _PebbleProt.RawMessageReceived += pebbleProtocolRawMessageReceived;
 
             endpointEvents = new Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>>();
-            RegisterEndpointCallback(Endpoints.PHONE_VERSION, PhoneVersionReceived);
-            RegisterEndpointCallback(Endpoints.VERSION, VersionReceived);
-            RegisterEndpointCallback(Endpoints.APP_MANAGER, AppbankStatusResponseReceived);
-            RegisterEndpointCallback(Endpoints.PUT_BYTES, PutBytesReceived);
+            RegisterEndpointCallback( Endpoints.PhoneVersion, PhoneVersionReceived );
+            RegisterEndpointCallback( Endpoints.Version, VersionReceived );
+            RegisterEndpointCallback( Endpoints.AppManager, AppbankStatusResponseReceived );
 
-            _PingTimer = new System.Timers.Timer(16180);
-            _PingTimer.Elapsed += pingTimer_Elapsed;
+            _PingTimer = new System.Timers.Timer( 16180 );
+            //_PingTimer.Elapsed += pingTimer_Elapsed;
             _PingTimer.Start();
         }
 
@@ -201,24 +183,24 @@ namespace flint
         /// <returns></returns>
         /// <exception cref="pebble.PebbleNotFoundException">When no Pebble or no Pebble of the 
         /// specified id was found.</exception>
-        public static Pebble GetPebble(string pebbleId = null)
+        public static Pebble GetPebble( string pebbleId = null )
         {
             List<Pebble> pebbleList = DetectPebbles();
 
-            if (pebbleList.Count == 0)
+            if ( pebbleList.Count == 0 )
             {
-                throw new PebbleNotFoundException("No paired Pebble found.");
+                throw new PebbleNotFoundException( "No paired Pebble found." );
             }
 
-            if (pebbleId == null)
+            if ( pebbleId == null )
             {
                 return pebbleList[0];
             }
 
-            Pebble ret = pebbleList.FirstOrDefault(peb => peb.PebbleID == pebbleId);
-            if (ret == null)
+            Pebble ret = pebbleList.FirstOrDefault( peb => peb.PebbleID == pebbleId );
+            if ( ret == null )
             {
-                throw new PebbleNotFoundException(pebbleId);
+                throw new PebbleNotFoundException( pebbleId );
             }
             return ret;
         }
@@ -232,31 +214,22 @@ namespace flint
         {
             var client = new BluetoothClient();
             // A list of all BT devices that are paired, in range, and named "Pebble *" 
-            var btlist = client.DiscoverDevices(20, true, false, false).
-                Where((bdi) => bdi.DeviceName.StartsWith("Pebble "));
+            var btlist = client.DiscoverDevices( 20, true, false, false ).
+                Where( bdi => bdi.DeviceName.StartsWith( "Pebble " ) );
 
             // A list of all available serial ports with some metadata including the PnP device ID,
             // which in turn contains a BT device address we can search for.
-            var _portlist = (new ManagementObjectSearcher("SELECT * FROM Win32_SerialPort")).Get();
+            var _portlist = ( new ManagementObjectSearcher( "SELECT * FROM Win32_SerialPort" ) ).Get();
             var portlist = new ManagementObject[_portlist.Count];
-            _portlist.CopyTo(portlist, 0);
-
-            var pebbleList = new List<Pebble>();
+            _portlist.CopyTo( portlist, 0 );
 
             // Match bluetooth devices and serial ports, then create Pebbles out of them.
             // Seems like a LINQ join should do this much more cleanly. 
-            foreach (BluetoothDeviceInfo bdi in btlist)
-            {
-                foreach (ManagementObject port in portlist)
-                {
-                    if (((string) port["PNPDeviceID"]).Contains(bdi.DeviceAddress.ToString()))
-                    {
-                        pebbleList.Add(new Pebble(port["DeviceID"] as string, bdi.DeviceName.Substring(7)));
-                    }
-                }
-            }
 
-            return pebbleList;
+            return ( from bdi in btlist
+                     from port in portlist
+                     where ( (string)port["PNPDeviceID"] ).Contains( bdi.DeviceAddress.ToString() )
+                     select new Pebble( port["DeviceID"] as string, bdi.DeviceName.Substring( 7 ) ) ).ToList();
         }
 
         /// <summary> Set the capabilities you want to tell the Pebble about.  
@@ -264,14 +237,14 @@ namespace flint
         /// </summary>
         /// <param name="sessionCap"></param>
         /// <param name="remoteCaps"></param>
-        public void SetCaps(uint? sessionCap = null, uint? remoteCaps = null)
+        public void SetCaps( uint? sessionCap = null, uint? remoteCaps = null )
         {
-            if (sessionCap != null)
+            if ( sessionCap != null )
             {
                 _SessionCaps = (uint)sessionCap;
             }
 
-            if (remoteCaps != null)
+            if ( remoteCaps != null )
             {
                 _RemoteCaps = (uint)remoteCaps;
             }
@@ -284,7 +257,7 @@ namespace flint
         {
             _PebbleProt.Connect();
             Alive = true;
-            OnConnect(this, EventArgs.Empty);
+            OnConnect( this, EventArgs.Empty );
         }
 
         /// <summary>
@@ -302,7 +275,7 @@ namespace flint
                 // disconnected, although the port will probably be in an invalid state.  Need to 
                 // find a good way to handle that.
                 Alive = false;
-                OnDisconnect(this, EventArgs.Empty);
+                OnDisconnect( this, EventArgs.Empty );
             }
         }
 
@@ -313,19 +286,19 @@ namespace flint
         /// </remarks>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void pingTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        void pingTimer_Elapsed( object sender, System.Timers.ElapsedEventArgs e )
         {
-            if (Alive)
+            if ( Alive )
             {
                 byte[] data = { 0 };
-                
+
                 try
                 {
-                    sendMessage(Endpoints.TIME, data);
-                    var wait = new EndpointSync<TimeReceivedEventArgs>(this, Endpoints.TIME);
-                    wait.WaitAndReturn(timeout: PingTimeout);
+                    SendMessage( Endpoints.Time, data );
+                    var wait = new EndpointSync<TimeReceivedEventArgs>( this, Endpoints.Time );
+                    wait.WaitAndReturn( timeout: PingTimeout );
                 }
-                catch (TimeoutException)
+                catch ( TimeoutException )
                 {
                     Disconnect();
                 }
@@ -338,19 +311,19 @@ namespace flint
         /// </summary>
         /// <param name="endpoint"></param>
         /// <param name="handler"></param>
-        public void RegisterEndpointCallback(Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler)
+        public void RegisterEndpointCallback( Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler )
         {
-            if (handler == null)
+            if ( handler == null )
             {
-                throw new ArgumentNullException("handler");
+                throw new ArgumentNullException( "handler" );
             }
-            if (endpointEvents.ContainsKey(endpoint) && endpointEvents[endpoint] != null)
+            if ( endpointEvents.ContainsKey( endpoint ) && endpointEvents[endpoint] != null )
             {
                 endpointEvents[endpoint] += handler;
             }
             else
             {
-                endpointEvents[endpoint] = (o, m) => { };
+                endpointEvents[endpoint] = ( o, m ) => { };
                 endpointEvents[endpoint] += handler;
             }
         }
@@ -358,11 +331,12 @@ namespace flint
         /// <summary> Deregister a given callback for a given function. </summary>
         /// <param name="endpoint"></param>
         /// <param name="handler"></param>
-        public void DeregisterEndpointCallback(Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler)
+        public void UnregisterEndpointCallback( Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler )
         {
-            if (endpointEvents.ContainsKey(endpoint)
-                && endpointEvents[endpoint] != null)
+            if ( endpointEvents.ContainsKey( endpoint )
+                && endpointEvents[endpoint] != null )
             {
+                //TODO: Delegate subtraction is not reliable
                 endpointEvents[endpoint] -= handler;
             }
         }
@@ -373,16 +347,16 @@ namespace flint
         /// <param name="cookie"></param>
         /// <param name="async">If true, return null immediately and let the caller wait for a PING event.  If false, 
         /// wait for the reply and return the PingReceivedEventArgs.</param>
-        public PingReceivedEventArgs Ping(UInt32 cookie = 0, bool async = false)
+        public PingReceivedEventArgs Ping( uint cookie = 0, bool async = false )
         {
-            byte[] _cookie = new byte[5];
+            var _cookie = new byte[5];
             // No need to worry about endianness as it's sent back byte for byte anyway.  
-            Array.Copy(BitConverter.GetBytes(cookie), 0, _cookie, 1, 4);
+            Array.Copy( BitConverter.GetBytes( cookie ), 0, _cookie, 1, 4 );
 
-            sendMessage(Endpoints.PING, _cookie);
-            if (!async)
+            SendMessage( Endpoints.Ping, _cookie );
+            if ( !async )
             {
-                var wait = new EndpointSync<PingReceivedEventArgs>(this, Endpoints.PING);
+                var wait = new EndpointSync<PingReceivedEventArgs>( this, Endpoints.Ping );
                 return wait.WaitAndReturn();
             }
             return null;
@@ -391,22 +365,22 @@ namespace flint
         /// <summary> Generic notification support.  Shouldn't have to use this, but feel free. </summary>
         /// <param name="type">Notification type.  So far we've got 0 for mail, 1 for SMS.</param>
         /// <param name="parts">Message parts will be clipped to 255 bytes.</param>
-        public void Notification(byte type, params String[] parts)
+        public void Notification( byte type, params string[] parts )
         {
-            string[] ts = { (new DateTime(1970, 1, 1) - DateTime.Now).TotalSeconds.ToString() };
-            parts = parts.Take(2).Concat(ts).Concat(parts.Skip(2)).ToArray();
+            string[] ts = { ( new DateTime( 1970, 1, 1 ) - DateTime.Now ).TotalSeconds.ToString() };
+            parts = parts.Take( 2 ).Concat( ts ).Concat( parts.Skip( 2 ) ).ToArray();
             byte[] data = { type };
-            foreach (string part in parts)
+            foreach ( string part in parts )
             {
-                byte[] partBytes = Encoding.UTF8.GetBytes(part);
-                if (partBytes.Length > 255)
+                byte[] partBytes = Encoding.UTF8.GetBytes( part );
+                if ( partBytes.Length > 255 )
                 {
-                    partBytes = partBytes.Take(255).ToArray();
+                    partBytes = partBytes.Take( 255 ).ToArray();
                 }
-                byte[] len = { Convert.ToByte(partBytes.Length) };
-                data = data.Concat(len).Concat(partBytes).ToArray();
+                byte[] len = { Convert.ToByte( partBytes.Length ) };
+                data = data.Concat( len ).Concat( partBytes ).ToArray();
             }
-            sendMessage(Endpoints.NOTIFICATION, data);
+            SendMessage( Endpoints.Notification, data );
         }
 
         /// <summary>
@@ -415,9 +389,9 @@ namespace flint
         /// <param name="sender"></param>
         /// <param name="subject"></param>
         /// <param name="body"></param>
-        public void NotificationMail(string sender, string subject, string body)
+        public void NotificationMail( string sender, string subject, string body )
         {
-            Notification(0, sender, body, subject);
+            Notification( 0, sender, body, subject );
         }
 
         /// <summary>
@@ -425,9 +399,9 @@ namespace flint
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="body"></param>
-        public void NotificationSMS(string sender, string body)
+        public void NotificationSMS( string sender, string body )
         {
-            Notification(1, sender, body);
+            Notification( 1, sender, body );
         }
 
         /// <summary> Send "Now playing.." metadata to the Pebble.  
@@ -436,45 +410,86 @@ namespace flint
         /// <param name="track"></param>
         /// <param name="album"></param>
         /// <param name="artist"></param>
-        public void SetNowPlaying(string artist, string album, string track)
+        public void SetNowPlaying( string artist, string album, string track )
         {
             // No idea what this does.  Do it anyway.
             byte[] data = { 16 };
 
-            byte[] _artist = Encoding.UTF8.GetBytes(artist);
-            byte[] _album = Encoding.UTF8.GetBytes(album);
-            byte[] _track = Encoding.UTF8.GetBytes(track);
+            byte[] _artist = Encoding.UTF8.GetBytes( artist );
+            byte[] _album = Encoding.UTF8.GetBytes( album );
+            byte[] _track = Encoding.UTF8.GetBytes( track );
             byte[] artistlen = { (byte)_artist.Length };
             byte[] albumlen = { (byte)_album.Length };
             byte[] tracklen = { (byte)_track.Length };
 
-            data = data.Concat(artistlen).Concat(_artist).ToArray();
-            data = data.Concat(albumlen).Concat(_album).ToArray();
-            data = data.Concat(tracklen).Concat(_track).ToArray();
+            data = data.Concat( artistlen ).Concat( _artist ).ToArray();
+            data = data.Concat( albumlen ).Concat( _album ).ToArray();
+            data = data.Concat( tracklen ).Concat( _track ).ToArray();
 
-            sendMessage(Endpoints.MUSIC_CONTROL, data);
+            SendMessage( Endpoints.MusicControl, data );
         }
 
         /// <summary> Set the time on the Pebble. Mostly convenient for syncing. </summary>
         /// <param name="dt">The desired DateTime.  Doesn't care about timezones.</param>
-        public void SetTime(DateTime dt)
+        public void SetTime( DateTime dt )
         {
             byte[] data = { 2 };
-            int timestamp = (int)(dt - new DateTime(1970, 1, 1)).TotalSeconds;
-            byte[] _timestamp = BitConverter.GetBytes(timestamp);
-            if (BitConverter.IsLittleEndian)
+            int timestamp = (int)( dt - new DateTime( 1970, 1, 1 ) ).TotalSeconds;
+            byte[] _timestamp = BitConverter.GetBytes( timestamp );
+            if ( BitConverter.IsLittleEndian )
             {
-                Array.Reverse(_timestamp);
+                Array.Reverse( _timestamp );
             }
-            data = data.Concat(_timestamp).ToArray();
-            sendMessage(Endpoints.TIME, data);
+            data = data.Concat( _timestamp ).ToArray();
+            SendMessage( Endpoints.Time, data );
         }
 
         /// <summary> Send a malformed ping (to trigger a LOGS response) </summary>
         public void BadPing()
         {
             byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
-            sendMessage(Endpoints.PING, cookie);
+            SendMessage( Endpoints.Ping, cookie );
+        }
+
+        public void InstallApp( PebbleBundle bundle )
+        {
+            if ( bundle == null )
+                throw new ArgumentNullException( "bundle" );
+            if ( bundle.BundleType != PebbleBundle.BundleTypes.Application )
+                throw new ArgumentException( "Bundle must be an application" );
+
+            var metaData = bundle.AppMetadata;
+            var uuid = metaData.UUID;
+            RemoveAppByUUID( uuid );
+
+            var appBank = GetAppbankContents().AppBank;
+
+            //TODO: null checks
+            byte firstFreeIndex = 1;
+            foreach ( var app in appBank.Apps )
+                if ( app.Index == firstFreeIndex )
+                    firstFreeIndex++;
+            if ( firstFreeIndex == appBank.Size )
+                throw new Exception( "All app banks are full" );
+
+            var zipFile = ZipFile.Read( bundle.FullPath );
+            //TODO: Handle nulls and file not found
+            var appEntry = zipFile.Entries.First( x => x.FileName == bundle.Manifest.Application.Filename );
+            byte[] appBinary = GetBytes( appEntry );
+
+
+
+            if ( PutBytes( appBinary, firstFreeIndex, TransferType.Binary ) == false )
+                throw new PebbleException( string.Format( "Failed to send application binary {0}/pebble-app.bin", bundle.FullPath ) );
+
+            if ( bundle.HasResources )
+            {
+                var resourcesEntry = zipFile.Entries.First( x => x.FileName == bundle.Manifest.Resources.Filename );
+                byte[] resourcesBinary = GetBytes( resourcesEntry );
+                if ( PutBytes( resourcesBinary, firstFreeIndex, TransferType.Resources ) == false )
+                    throw new PebbleException( string.Format( "Failed to send application resources {0}/app_resources.pbpack", bundle.FullPath ) );
+            }
+            AddApp( firstFreeIndex );
         }
 
         #endregion
@@ -484,14 +499,14 @@ namespace flint
         /// <summary> Get the Pebble's version info.  </summary>
         /// <param name="async">If true, return immediately.  If false, wait until the response 
         /// has been received.</param>
-        public void GetVersion(Boolean async = false)
+        public void GetVersion( Boolean async = false )
         {
             byte[] data = { 0 };
-            sendMessage(Endpoints.VERSION, data);
-            if (!async)
+            SendMessage( Endpoints.Version, data );
+            if ( !async )
             {
-                var wait = new EndpointSync<MessageReceivedEventArgs>(this, Endpoints.VERSION);
-                wait.WaitAndReturn(timeout: 5000);
+                var wait = new EndpointSync<MessageReceivedEventArgs>( this, Endpoints.Version );
+                wait.WaitAndReturn( timeout: 5000 );
             }
         }
 
@@ -501,13 +516,13 @@ namespace flint
         /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
         /// the appropriate TimeReceivedEventArgs.</param>
         /// <returns>A TimeReceivedEventArgs with the time, or null.</returns>
-        public TimeReceivedEventArgs GetTime(bool async = false)
+        public TimeReceivedEventArgs GetTime( bool async = false )
         {
             byte[] data = { 0 };
-            sendMessage(Endpoints.TIME, data);
-            if (!async)
+            SendMessage( Endpoints.Time, data );
+            if ( !async )
             {
-                var wait = new EndpointSync<TimeReceivedEventArgs>(this, Endpoints.TIME);
+                var wait = new EndpointSync<TimeReceivedEventArgs>( this, Endpoints.Time );
                 return wait.WaitAndReturn();
             }
             return null;
@@ -519,12 +534,12 @@ namespace flint
         /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
         /// the appropriate AppbankContentsReceivedEventArgs.</param>
         /// <returns></returns>
-        public AppbankContentsReceivedEventArgs GetAppbankContents(bool async = false)
+        public AppbankContentsReceivedEventArgs GetAppbankContents( bool async = false )
         {
-            sendMessage(Endpoints.APP_MANAGER, new byte[] { 1 });
-            if (!async)
+            SendMessage( Endpoints.AppManager, new byte[] { 1 } );
+            if ( !async )
             {
-                var wait = new EndpointSync<AppbankContentsReceivedEventArgs>(this, Endpoints.APP_MANAGER);
+                var wait = new EndpointSync<AppbankContentsReceivedEventArgs>( this, Endpoints.AppManager );
                 return wait.WaitAndReturn();
             }
             return null;
@@ -537,21 +552,16 @@ namespace flint
         /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
         /// the appropriate AppbankInstallMessageEventArgs.</param>
         /// <returns></returns>
-        public AppbankInstallMessageEventArgs RemoveApp(AppBank.App app, bool async = false)
+        public AppbankInstallMessageEventArgs RemoveApp( AppBank.App app, bool async = false )
         {
-            var msg = new byte[1];
-            msg[0] = 2;
-            msg = msg.Concat(BitConverter.GetBytes(app.ID)).ToArray();
-            msg = msg.Concat(BitConverter.GetBytes(app.Index)).ToArray();
-            if (BitConverter.IsLittleEndian)
+            var msg = ConcatByteArray( new byte[] { 2 },
+                OrderByteArray( BitConverter.GetBytes( app.ID ) ),
+                OrderByteArray( BitConverter.GetBytes( app.Index ) ) );
+
+            SendMessage( Endpoints.AppManager, msg );
+            if ( !async )
             {
-                Array.Reverse(msg, 1, 4);
-                Array.Reverse(msg, 5, 4);
-            }
-            sendMessage(Endpoints.APP_MANAGER, msg);
-            if (!async)
-            {
-                var wait = new EndpointSync<AppbankInstallMessageEventArgs>(this, Endpoints.APP_MANAGER);
+                var wait = new EndpointSync<AppbankInstallMessageEventArgs>( this, Endpoints.AppManager );
                 return wait.WaitAndReturn();
             }
             return null;
@@ -569,13 +579,13 @@ namespace flint
         /// <param name="endpoint"></param>
         /// <param name="payload"></param>
         /// <exception cref="ArgumentOutOfRangeException">Passed on when the payload is too large.</exception>
-        void sendMessage(Endpoints endpoint, byte[] payload)
+        private void SendMessage( Endpoints endpoint, byte[] payload )
         {
             try
             {
-                _PebbleProt.sendMessage((ushort)endpoint, payload);
+                _PebbleProt.SendMessage( (ushort)endpoint, payload );
             }
-            catch (TimeoutException e)
+            catch ( TimeoutException e )
             {
                 Disconnect();
             }
@@ -583,19 +593,19 @@ namespace flint
 
         #region Pebble message event handlers
 
-        void pebbleProt_RawMessageReceived(object sender, RawMessageReceivedEventArgs e)
+        private void pebbleProtocolRawMessageReceived( object sender, RawMessageReceivedEventArgs e )
         {
             Endpoints endpoint = (Endpoints)e.Endpoint;
             // Switch for the specific events
-            switch (endpoint)
+            switch ( endpoint )
             {
-                case Endpoints.LOGS:
+                case Endpoints.Logs:
                     LogReceived( this, new LogReceivedEventArgs( e.Payload ) );
                     break;
-                case Endpoints.PING:
-                    PingReceived(this, new PingReceivedEventArgs(e.Payload));
+                case Endpoints.Ping:
+                    PingReceived( this, new PingReceivedEventArgs( e.Payload ) );
                     break;
-                case Endpoints.MUSIC_CONTROL:
+                case Endpoints.MusicControl:
                     MediaControlReceived( this, new MediaControlReceivedEventArgs( e.Payload ) );
                     break;
             }
@@ -604,41 +614,41 @@ namespace flint
             MessageReceived( this, new MessageReceivedEventArgs( endpoint, e.Payload ) );
 
             // Endpoint-specific
-            if (endpointEvents.ContainsKey(endpoint))
+            if ( endpointEvents.ContainsKey( endpoint ) )
             {
                 EventHandler<MessageReceivedEventArgs> h = endpointEvents[endpoint];
-                if (h != null)
+                if ( h != null )
                 {
-                    h(this, new MessageReceivedEventArgs(endpoint, e.Payload));
+                    h( this, new MessageReceivedEventArgs( endpoint, e.Payload ) );
                 }
             }
         }
 
-        private void VersionReceived(object sender, MessageReceivedEventArgs e)
+        private void VersionReceived( object sender, MessageReceivedEventArgs e )
         {
-            Firmware = ParseVersion(e.Payload.Skip(1).Take(47).ToArray());
-            RecoveryFirmware = ParseVersion(e.Payload.Skip(48).Take(47).ToArray());
+            Firmware = ParseVersion( e.Payload.Skip( 1 ).Take( 47 ).ToArray() );
+            RecoveryFirmware = ParseVersion( e.Payload.Skip( 48 ).Take( 47 ).ToArray() );
         }
 
-        private void PhoneVersionReceived(object sender, MessageReceivedEventArgs e)
+        private void PhoneVersionReceived( object sender, MessageReceivedEventArgs e )
         {
             byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
-            byte[] session = BitConverter.GetBytes(_SessionCaps);
-            byte[] remote = BitConverter.GetBytes(_RemoteCaps);
-            if (BitConverter.IsLittleEndian)
+            byte[] session = BitConverter.GetBytes( _SessionCaps );
+            byte[] remote = BitConverter.GetBytes( _RemoteCaps );
+            if ( BitConverter.IsLittleEndian )
             {
-                Array.Reverse(session);
-                Array.Reverse(remote);
+                Array.Reverse( session );
+                Array.Reverse( remote );
             }
 
             byte[] msg = new byte[0];
-            msg = msg.Concat(prefix).Concat(session).Concat(remote).ToArray();
-            sendMessage(Endpoints.PHONE_VERSION, msg);
+            msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
+            SendMessage( Endpoints.PhoneVersion, msg );
         }
 
-        private void AppbankStatusResponseReceived(object sender, MessageReceivedEventArgs e)
+        private void AppbankStatusResponseReceived( object sender, MessageReceivedEventArgs e )
         {
-            switch (e.Payload[0])
+            switch ( e.Payload[0] )
             {
                 case 1:
                     AppbankContentsReceived( this, new AppbankContentsReceivedEventArgs( e.Payload ) );
@@ -653,7 +663,7 @@ namespace flint
 
         #region Utility stuff
 
-        private static FirmwareVersion ParseVersion(byte[] data)
+        private static FirmwareVersion ParseVersion( byte[] data )
         {
             /*
              * The layout of the version info is:
@@ -664,27 +674,125 @@ namespace flint
              * 45:   HW Platform (byte)
              * 46:   Metadata version (byte)
              */
-            byte[] _ts = data.Take(4).ToArray();
-            if (BitConverter.IsLittleEndian)
+            byte[] _ts = data.Take( 4 ).ToArray();
+            if ( BitConverter.IsLittleEndian )
             {
-                Array.Reverse(_ts);
+                Array.Reverse( _ts );
             }
-            DateTime timestamp = Util.TimestampToDateTime(BitConverter.ToInt32(_ts, 0));
-            string version = Encoding.UTF8.GetString(data.Skip(4).Take(32).ToArray());
-            string commit = Encoding.UTF8.GetString(data.Skip(36).Take(8).ToArray());
-            version = version.Substring(0, version.IndexOf('\0'));
-            commit = commit.Substring(0, commit.IndexOf('\0'));
-            Boolean isRecovery = BitConverter.ToBoolean(data, 44);
+            DateTime timestamp = Util.TimestampToDateTime( BitConverter.ToInt32( _ts, 0 ) );
+            string version = Encoding.UTF8.GetString( data.Skip( 4 ).Take( 32 ).ToArray() );
+            string commit = Encoding.UTF8.GetString( data.Skip( 36 ).Take( 8 ).ToArray() );
+            version = version.Substring( 0, version.IndexOf( '\0' ) );
+            commit = commit.Substring( 0, commit.IndexOf( '\0' ) );
+            Boolean isRecovery = BitConverter.ToBoolean( data, 44 );
             byte hardwarePlatform = data[45];
             byte metadataVersion = data[46];
-            return new FirmwareVersion(timestamp, version, commit, isRecovery, hardwarePlatform, metadataVersion);
+            return new FirmwareVersion( timestamp, version, commit, isRecovery, hardwarePlatform, metadataVersion );
         }
 
         public override string ToString()
         {
-            return string.Format("Pebble {0} on {1}", PebbleID, Port);
+            return string.Format( "Pebble {0} on {1}", PebbleID, Port );
         }
 
         #endregion
+
+        private void RemoveAppByUUID( byte[] uuid )
+        {
+            byte[] data = ConcatByteArray( new byte[] { 2 }, uuid );
+            SendMessage( Endpoints.AppManager, data );
+            var wait = new EndpointSync<AppbankInstallMessageEventArgs>( this, Endpoints.AppManager );
+            wait.WaitAndReturn();
+        }
+
+        private bool PutBytes( byte[] binary, byte index, TransferType transferType )
+        {
+            bool success = true;
+            byte[] token = null;
+            var resetEvent = new ManualResetEvent( false );
+            EventHandler<MessageReceivedEventArgs> sendResponseHandler =
+                ( sender, e ) =>
+                {
+                    if ( e.Payload[0] != 1 )
+                        success = false;
+                    else if ( token == null )
+                        token = e.Payload.Skip( 1 ).ToArray();
+                    resetEvent.Set();
+                };
+
+            RegisterEndpointCallback( Endpoints.PutBytes, sendResponseHandler );
+            byte[] length = OrderByteArray( BitConverter.GetBytes( binary.Length ) );
+
+            //Get token
+            var header = ConcatByteArray( new byte[] { 1 }, length, new[] { (byte)transferType, index } );
+            SendMessage( Endpoints.PutBytes, header );
+            resetEvent.WaitOne();
+            if ( success == false )
+                return false;
+
+            const int BUFFER_SIZE = 2000;
+            //Send at most 2000 bytes at a time
+            for ( int i = 0; i <= binary.Length / BUFFER_SIZE; i++ )
+            {
+                byte[] data = binary.Skip( BUFFER_SIZE * i ).Take( BUFFER_SIZE ).ToArray();
+                var dataHeader = ConcatByteArray( new byte[] { 2 }, token, OrderByteArray( BitConverter.GetBytes( data.Length ) ) );
+                resetEvent.Reset();
+                SendMessage( Endpoints.PutBytes, ConcatByteArray( dataHeader, data ) );
+                resetEvent.WaitOne();
+                if ( success == false )
+                    return false;
+            }
+
+            //Send commit message
+            uint crc = Crc32.Calculate( binary );
+            byte[] crcBytes = OrderByteArray( BitConverter.GetBytes( crc ) );
+            byte[] commitMessage = ConcatByteArray( new byte[] { 3 }, token, crcBytes );
+            resetEvent.Reset();
+            SendMessage( Endpoints.PutBytes, commitMessage );
+            resetEvent.WaitOne();
+            if ( success == false )
+                return false;
+
+            //Send complete message
+            var completeMessage = ConcatByteArray( new byte[] { 5 }, token );
+            resetEvent.Reset();
+            SendMessage( Endpoints.PutBytes, completeMessage );
+            resetEvent.WaitOne();
+
+            return success;
+        }
+
+        private void AddApp( byte index )
+        {
+            byte[] indexBytes = OrderByteArray( BitConverter.GetBytes( (uint)index ) );
+            var data = ConcatByteArray( new byte[] { 3 }, indexBytes );
+            SendMessage( Endpoints.AppManager, data );
+        }
+
+        private byte[] GetBytes( ZipEntry zipEntry )
+        {
+            using ( var memoryStream = new MemoryStream() )
+            {
+                zipEntry.Extract( memoryStream );
+                memoryStream.Position = 0;
+                return memoryStream.ToArray();
+            }
+        }
+
+        private static byte[] OrderByteArray( IEnumerable<byte> bytes )
+        {
+            if ( BitConverter.IsLittleEndian )
+                return bytes.Reverse().ToArray();
+            return bytes.ToArray();
+        }
+
+        public static byte[] ConcatByteArray( params byte[][] array )
+        {
+            var rv = new byte[array.Select( x => x.Length ).Sum()];
+
+            for ( int i = 0, insertionPoint = 0; i < array.Length; insertionPoint += array[i].Length, i++ )
+                Array.Copy( array[i], 0, rv, insertionPoint, array[i].Length );
+            return rv;
+        }
     }
 }

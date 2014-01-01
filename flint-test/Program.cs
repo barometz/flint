@@ -86,7 +86,7 @@ namespace flint_test
             pebble.PingReceived += pebble_PingReceived;
             pebble.MediaControlReceived += pebble_MediaControlReceived;
             // Subscribe to an event for a particular endpoint
-            pebble.RegisterEndpointCallback(Pebble.Endpoints.PING, pingReceived);
+            pebble.RegisterEndpointCallback(Pebble.Endpoints.Ping, pingReceived);
 
             pebble.GetVersion();
             Console.WriteLine(pebble.Firmware);

@@ -18,15 +18,15 @@ namespace flint
         public struct App
         {
             [MarshalAs(UnmanagedType.U4)]
-            public readonly int ID;
+            public readonly uint ID;
             [MarshalAs(UnmanagedType.U4)]
-            public readonly int Index;
+            public readonly uint Index;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
             public readonly string Name;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
             public readonly string Company;
             [MarshalAs(UnmanagedType.U4)]
-            public readonly int Flags;
+            public readonly uint Flags;
             [MarshalAs(UnmanagedType.U1)]
             public readonly byte MajorVersion;
             [MarshalAs(UnmanagedType.U1)]
@@ -54,7 +54,7 @@ namespace flint
             const int headerSize = 9;
             const int appInfoSize = 78;
             Apps = new List<App>();
-            if (bytes.Count() < headerSize)
+            if (bytes.Length < headerSize)
             {
                 throw new ArgumentOutOfRangeException("Payload is shorter than 9 bytes, "+
                     "which is the minimum size for an appbank content response.");

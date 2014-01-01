@@ -51,7 +51,7 @@ namespace flint
         /// </summary>
         /// <param name="payload">Must be 5 bytes long.  The latter four are interpreted as a timestamp.</param>
         public TimeReceivedEventArgs(byte[] payload)
-            : this(Pebble.Endpoints.TIME, payload)
+            : this(Pebble.Endpoints.Time, payload)
         {
         }
     }
@@ -76,7 +76,7 @@ namespace flint
         }
 
         public PingReceivedEventArgs(byte[] payload)
-            : this(Pebble.Endpoints.PING, payload)
+            : this(Pebble.Endpoints.Ping, payload)
         {
         }
 
@@ -130,7 +130,7 @@ namespace flint
         }
 
         public LogReceivedEventArgs(byte[] payload)
-            : this(Pebble.Endpoints.LOGS, payload)
+            : this(Pebble.Endpoints.Logs, payload)
         {
         }
 
@@ -163,7 +163,7 @@ namespace flint
         /// </summary>
         /// <param name="payload"></param>
         public MediaControlReceivedEventArgs(byte[] payload)
-            : this(Pebble.Endpoints.MUSIC_CONTROL, payload)
+            : this(Pebble.Endpoints.MusicControl, payload)
         {
         }
     }
@@ -181,7 +181,7 @@ namespace flint
         }
 
         public AppbankContentsReceivedEventArgs(byte[] payload)
-            : this(Pebble.Endpoints.APP_MANAGER, payload)
+            : this(Pebble.Endpoints.AppManager, payload)
         {
         }
     }
@@ -209,7 +209,7 @@ namespace flint
         }
 
         public AppbankInstallMessageEventArgs(byte[] payload)
-            : this(Pebble.Endpoints.APP_MANAGER, payload)
+            : this(Pebble.Endpoints.AppManager, payload)
         {
         }
     }

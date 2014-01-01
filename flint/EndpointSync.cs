@@ -42,7 +42,7 @@ namespace flint
 
         private void trigger( object sender, MessageReceivedEventArgs e )
         {
-            _Pebble.DeregisterEndpointCallback( _Endpoint, trigger );
+            _Pebble.UnregisterEndpointCallback( _Endpoint, trigger );
             Result = (T)Activator.CreateInstance( typeof( T ), _Endpoint, e.Payload );
             _mre.Set();
         }

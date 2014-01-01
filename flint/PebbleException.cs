@@ -2,24 +2,17 @@
 
 namespace flint
 {
-    class PebbleNotFoundException : Exception
+    public class PebbleException : Exception
     {
-        public string PebbleID { get; private set; }
-        public PebbleNotFoundException(string pebbleId = "0000")
-        {
-            PebbleID = pebbleId;
-        }
+        public PebbleException()
+        { }
 
-        public PebbleNotFoundException(string message, string pebbleId = "0000")
-            : base(message)
-        {
-            PebbleID = pebbleId;
-        }
+        public PebbleException( string message )
+            : base( message )
+        { }
 
-        public PebbleNotFoundException(string message, Exception inner, string pebbleId = "0000")
-            : base(message, inner)
-        {
-            PebbleID = pebbleId;
-        }
+        public PebbleException( string message, Exception innerException )
+            : base( message, innerException )
+        { }
     }
 }

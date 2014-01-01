@@ -180,8 +180,8 @@ namespace flint
             public readonly uint RelocationListStart;
             [MarshalAs(UnmanagedType.U4)]
             public readonly uint RelocationListItemCount;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 16)]
-            public readonly string UUID;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+            public readonly byte[] UUID;
 
             public override string ToString()
             {
@@ -203,10 +203,15 @@ namespace flint
         public string Filename { get { return Path.GetFileName(FullPath); } }
         /// <summary> The full path to the file. </summary>
         public string FullPath { get; private set; }
-        public ApplicationMetadata Application { get; private set; }
+        public ApplicationMetadata AppMetadata { get; private set; }
 
         private readonly ZipFile _Bundle;
         private readonly BundleManifest _Manifest;
+
+        public BundleManifest Manifest
+        {
+            get { return _Manifest; }
+        }
 
         /// <summary>
         /// Create a new PebbleBundle from a .pwb file and parse its metadata.
@@ -254,9 +259,10 @@ namespace flint
                     throw new ArgumentException(String.Format(format, _Manifest.Application.Filename));
                 }
 
-                Application = Util.ReadStruct<ApplicationMetadata>(binStream);
+                AppMetadata = Util.ReadStruct<ApplicationMetadata>(binStream);
                 binStream.Close();
             }
+            _Bundle.Dispose();
         }
 
         public override string ToString()
@@ -264,7 +270,7 @@ namespace flint
             if (BundleType == BundleTypes.Application)
             {
                 const string format = "{0} containing watch app {1}";
-                return String.Format(format, Filename, Application);
+                return String.Format(format, Filename, AppMetadata);
             }
             else
             {
