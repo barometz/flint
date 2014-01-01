@@ -55,10 +55,6 @@ namespace flint
             Other = 8
         }
 
-        /* Capabilities information gratefully taken from 
-         * https://github.com/bldewolf/libpebble/commit/ca3c335aef3bdb5914b1b4fcd63701baea9de848
-         */
-
         public enum SessionCaps : uint
         {
             GAMMA_RAY = 0x80000000

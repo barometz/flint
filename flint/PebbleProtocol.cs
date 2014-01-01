@@ -4,22 +4,6 @@ using System.IO.Ports;
 
 namespace flint
 {
-    /// <summary> Args for the event of a message being received. 
-    /// Possibly a little excessive as the relevant event will most likely have 
-    /// exactly one subscriber, but it's a small effort.
-    /// </summary>
-    internal class RawMessageReceivedEventArgs : EventArgs
-    {
-        public UInt16 Endpoint { get; private set; }
-        public byte[] Payload { get; private set; }
-
-        public RawMessageReceivedEventArgs( UInt16 endpoint, byte[] payload )
-        {
-            Endpoint = endpoint;
-            Payload = payload;
-        }
-    }
-
     /// <summary> Handles the basic protocol structure for Pebble communication.
     /// Essentially handles the SerialPort and translates the stream to 
     /// endpoint,payload pairs and vv.  Does and should not handle anything 

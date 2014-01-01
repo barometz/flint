@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>flint</RootNamespace>
     <AssemblyName>flint</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -62,16 +62,23 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppBank.cs" />
+    <Compile Include="AppbankContentsReceivedEventArgs.cs" />
     <Compile Include="Crc32.cs" />
     <Compile Include="EndpointSync.cs" />
     <Compile Include="FirmwareVersion.cs" />
+    <Compile Include="LogReceivedEventArgs.cs" />
+    <Compile Include="MediaControlReceivedEventArgs.cs" />
+    <Compile Include="MessageReceivedEventArgs.cs" />
     <Compile Include="Pebble.cs" />
     <Compile Include="PebbleBundle.cs" />
-    <Compile Include="PebbleEventArgs.cs" />
+    <Compile Include="AppbankInstallMessageEventArgs.cs" />
     <Compile Include="PebbleException.cs" />
     <Compile Include="PebbleNotFoundException.cs" />
     <Compile Include="PebbleProtocol.cs" />
+    <Compile Include="PingReceivedEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RawMessageReceivedEventArgs.cs" />
+    <Compile Include="TimeReceivedEventArgs.cs" />
     <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
