@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Threading;
 using GalaSoft.MvvmLight;
-using flint;
+using flint.Responses;
 
 namespace Windows.Pebble.ViewModels
 {
@@ -47,8 +47,8 @@ namespace Windows.Pebble.ViewModels
         {
             if (_pebble.Alive)
             {
-                TimeReceivedEventArgs timeResult = await _pebble.GetTimeAsync();
-                if ( timeResult != null )
+                TimeResponse timeResult = await _pebble.GetTimeAsync();
+                if ( timeResult.Success )
                     PebbleTime = timeResult.Time;
             }
             

@@ -101,7 +101,6 @@ namespace flint
         /// <summary> Received a music control message (next/prev/playpause) from the Pebble. </summary>
         public event EventHandler<MediaControlReceivedEventArgs> MediaControlReceived = delegate { };
 
-        public event EventHandler<AppbankInstallMessageEventArgs> AppbankInstallMessage = delegate { };
         /// <summary> Holds callbacks for the separate endpoints.  
         /// Saves a lot of typing. There's probably a good reason not to do this.
         /// </summary>
@@ -467,13 +466,9 @@ namespace flint
         /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
         /// the appropriate TimeReceivedEventArgs.</param>
         /// <returns>A TimeReceivedEventArgs with the time, or null.</returns>
-        public async Task<TimeReceivedEventArgs> GetTimeAsync()
+        public async Task<TimeResponse> GetTimeAsync()
         {
-            byte[] date = { 0 };
-            byte[] result = await SendMessageAsync( Endpoints.Time, date );
-            if ( result != null )
-                return new TimeReceivedEventArgs( result );
-            return null;
+            return  await SendMessageAsync<TimeResponse>( Endpoints.Time, new byte[] {0} );
         }
 
         /// <summary>
@@ -651,19 +646,6 @@ namespace flint
             msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
             SendMessageAsync( Endpoints.PhoneVersion, msg );
         }
-
-        //private void AppbankStatusResponseReceived( object sender, MessageReceivedEventArgs e )
-        //{
-        //    switch ( e.Payload[0] )
-        //    {
-        //        case 1:
-        //            AppbankContentsReceived( this, new AppbankContentsReceivedEventArgs( e.Payload ) );
-        //            break;
-        //        case 2:
-        //            AppbankInstallMessage( this, new AppbankInstallMessageEventArgs( e.Payload ) );
-        //            break;
-        //    }
-        //}
 
         #endregion
 

@@ -80,7 +80,7 @@
     <Compile Include="Responses\PingResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RawMessageReceivedEventArgs.cs" />
-    <Compile Include="TimeReceivedEventArgs.cs" />
+    <Compile Include="Responses\TimeResponse.cs" />
     <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
