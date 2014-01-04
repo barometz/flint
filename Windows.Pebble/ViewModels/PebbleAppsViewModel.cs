@@ -49,7 +49,7 @@ namespace Windows.Pebble.ViewModels
             {
                 if ( Set( () => IsSelected, ref _IsSelected, value ) )
                 {
-                    LoadAppsAsync();
+                    LoadValuesAsync();
                 }
             }
         }
@@ -59,6 +59,22 @@ namespace Windows.Pebble.ViewModels
         {
             get { return _Loading; }
             set { Set( () => Loading, ref _Loading, value ); }
+        }
+
+        public async Task OnConnectedAsync()
+        {
+            await LoadValuesAsync();
+        }
+
+        public async Task OnDisconnectedAsync()
+        {
+            await LoadValuesAsync();
+        }
+
+        private async Task LoadValuesAsync()
+        {
+            if (IsSelected && _pebble.Alive)
+                await LoadAppsAsync();
         }
 
         private async Task LoadAppsAsync()
@@ -105,7 +121,5 @@ namespace Windows.Pebble.ViewModels
                 await LoadAppsAsync();
             }
         }
-
-
     }
 }

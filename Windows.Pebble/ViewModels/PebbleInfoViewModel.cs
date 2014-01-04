@@ -25,29 +25,10 @@ namespace Windows.Pebble.ViewModels
             get { return _IsSelected; }
             set
             {
-                if ( Set( () => IsSelected, ref _IsSelected, value ) )
+                if ( Set( () => IsSelected, ref _IsSelected, value ))
                 {
-                    if (value)
-                    {
-                        _timer.Start();
-                        LoadFirmwareAsync();
-                    }
-                    else
-                        _timer.Stop();
+                    LoadValuesAsync();
                 }
-            }
-        }
-
-        private async Task LoadFirmwareAsync()
-        {
-            if (_pebble.Alive == false)
-                return;
-
-            FirmwareResponse firmwareResponse = await _pebble.GetFirmwareVersionAsync();
-            if (firmwareResponse.Success)
-            {
-                Firmware = firmwareResponse.Firmware;
-                RecoveryFirmware = firmwareResponse.RecoveryFirmware;
             }
         }
 
@@ -77,16 +58,50 @@ namespace Windows.Pebble.ViewModels
             set { Set(() => RecoveryFirmware, ref _RecoveryFirmware, value); }
         }
 
+        public async Task OnConnectedAsync()
+        {
+            await LoadValuesAsync();
+        }
+
+        public async Task OnDisconnectedAsync()
+        {
+            await LoadValuesAsync();
+        }
+
+        private async Task LoadValuesAsync()
+        {
+            if ( IsSelected && _pebble.Alive )
+            {
+                _timer.Start();
+                await LoadFirmwareAsync();
+            }
+            else
+                _timer.Stop();
+        }
+
         private async void UpdateTimes()
         {
-            if ( _pebble.Alive )
+            if (_pebble.Alive)
             {
                 TimeResponse timeResult = await _pebble.GetTimeAsync();
-                if ( timeResult.Success )
+                if (timeResult.Success)
                     PebbleTime = timeResult.Time;
             }
 
-            RaisePropertyChanged( () => CurrentTime );
+            RaisePropertyChanged(() => CurrentTime);
+        }
+
+        private async Task LoadFirmwareAsync()
+        {
+            if ( _pebble.Alive == false )
+                return;
+
+            FirmwareResponse firmwareResponse = await _pebble.GetFirmwareVersionAsync();
+            if ( firmwareResponse.Success )
+            {
+                Firmware = firmwareResponse.Firmware;
+                RecoveryFirmware = firmwareResponse.RecoveryFirmware;
+            }
         }
     }
 }

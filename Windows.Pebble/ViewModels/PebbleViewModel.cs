@@ -59,12 +59,20 @@ namespace Windows.Pebble.ViewModels
             get { return _toggleConnectionCommand; }
         }
 
-        private void OnToggleConnect( )
+        private async void OnToggleConnect( )
         {
             if (IsConnected)
+            {
                 _pebble.Disconnect();
+                await PebbleInfo.OnDisconnectedAsync();
+                await PebbleApps.OnDisconnectedAsync();
+            }
             else
+            {
                 _pebble.Connect();
+                await PebbleInfo.OnConnectedAsync();
+                await PebbleApps.OnConnectedAsync();
+            }
             IsConnected = !IsConnected;
         }
     }
