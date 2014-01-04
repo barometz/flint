@@ -294,15 +294,17 @@ namespace flint
         #region Messages to Pebble
 
         /// <summary> Send the Pebble a ping. </summary>
-        /// <param name="cookie"></param>
+        /// <param name="pingData"></param>
         /// <param name="async">If true, return null immediately and let the caller wait for a PING event.  If false, 
         /// wait for the reply and return the PingReceivedEventArgs.</param>
-        public async Task<PingResponse> PingAsync( uint cookie = 0, bool async = false )
+        public async Task<PingResponse> PingAsync( uint pingData = 0 )
         {
             // No need to worry about endianness as it's sent back byte for byte anyway.
-            byte[] pingData = BitConverter.GetBytes( cookie );
+            byte[] data = BitConverter.GetBytes( pingData );
 
-            return await SendMessageAsync<PingResponse>( Endpoints.Ping, pingData );
+            data = ConcatByteArray( new byte[] { 0 }, data );
+
+            return await SendMessageAsync<PingResponse>( Endpoints.Ping, data );
         }
 
         /// <summary> Generic notification support.  Shouldn't have to use this, but feel free. </summary>

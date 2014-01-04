@@ -96,6 +96,13 @@
                     </Grid>
                 </GroupBox>
             </TabItem>
+            <TabItem Header="Test" DataContext="{Binding PebbleTest}">
+                <Grid Margin="10">
+                    <StackPanel>
+                        <Button Content="Send Ping" Command="{Binding PingCommand}" Padding="10,1" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
         </TabControl>
     </Grid>
 </Window>

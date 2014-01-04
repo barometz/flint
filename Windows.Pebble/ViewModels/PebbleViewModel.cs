@@ -1,11 +1,6 @@
-﻿using flint;
-using GalaSoft.MvvmLight;
+﻿using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
-using Microsoft.Win32;
 using System;
-using System.ComponentModel;
-using System.Threading.Tasks;
-using System.Windows.Data;
 using System.Windows.Input;
 
 namespace Windows.Pebble.ViewModels
@@ -14,6 +9,7 @@ namespace Windows.Pebble.ViewModels
     {
         private readonly PebbleInfoViewModel _pebbleInfo;
         private readonly PebbleAppsViewModel _pebbleApps;
+        private readonly PebbleTestViewModel _pebbleTest;
 
         private readonly RelayCommand _toggleConnectionCommand;
 
@@ -26,6 +22,7 @@ namespace Windows.Pebble.ViewModels
 
             _pebbleInfo = new PebbleInfoViewModel(_pebble);
             _pebbleApps = new PebbleAppsViewModel(_pebble);
+            _pebbleTest = new PebbleTestViewModel(_pebble);
 
             _toggleConnectionCommand = new RelayCommand( OnToggleConnect );
         }
@@ -50,6 +47,11 @@ namespace Windows.Pebble.ViewModels
         public PebbleAppsViewModel PebbleApps
         {
             get { return _pebbleApps; }
+        }
+
+        public PebbleTestViewModel PebbleTest
+        {
+            get { return _pebbleTest; }
         }
 
         public ICommand ToggleConnectionCommand
