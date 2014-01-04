@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppBank.cs" />
+    <Compile Include="ProgressValue.cs" />
     <Compile Include="Responses\AppbankRetrievedResponse.cs" />
     <Compile Include="Responses\FirmwareResponse.cs" />
     <Compile Include="Responses\ResponseBase.cs" />

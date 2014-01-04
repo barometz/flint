@@ -389,17 +389,22 @@ namespace flint
             SendMessageAsync( Endpoints.Ping, cookie );
         }
 
-        public async Task InstallAppAsync( PebbleBundle bundle )
+        public async Task InstallAppAsync( PebbleBundle bundle,  IProgress<ProgressValue> progress = null)
         {
             if ( bundle == null )
                 throw new ArgumentNullException( "bundle" );
             if ( bundle.BundleType != PebbleBundle.BundleTypes.Application )
                 throw new ArgumentException( "Bundle must be an application" );
 
+            if (progress != null)
+                progress.Report(new ProgressValue("Removing previous install(s) of the app if they exist", 1));
             var metaData = bundle.AppMetadata;
             var uuid = metaData.UUID;
-            RemoveAppByUUID( uuid );
 
+            RemoveAppByUUID( uuid );
+            
+            if (progress != null)
+                progress.Report(new ProgressValue("Getting current apps", 10));
             AppbankRetrievedResponse appBankResult = await GetAppbankContentsAsync();
 
             if ( appBankResult.Success == false )
@@ -413,12 +418,18 @@ namespace flint
             if ( firstFreeIndex == appBank.Size )
                 throw new PebbleException( "All app banks are full" );
 
+            if (progress != null)
+                progress.Report(new ProgressValue("Reading app data", 30));
+
             var zipFile = ZipFile.Read( bundle.FullPath );
             var appEntry = zipFile.Entries.FirstOrDefault( x => x.FileName == bundle.Manifest.Application.Filename );
             if ( appEntry == null )
                 throw new PebbleException( "Could find application file" );
 
             byte[] appBinary = GetBytes( appEntry );
+
+            if (progress != null)
+                progress.Report(new ProgressValue("Transferring app to Pebble", 50));
 
             if ( await PutBytes( appBinary, firstFreeIndex, TransferType.Binary ) == false )
                 throw new PebbleException( string.Format( "Failed to send application binary {0}/pebble-app.bin", bundle.FullPath ) );
@@ -430,10 +441,16 @@ namespace flint
                     throw new PebbleException( "Could not find resource file" );
 
                 byte[] resourcesBinary = GetBytes( resourcesEntry );
+                if (progress != null)
+                    progress.Report(new ProgressValue("Transferring app resources to Pebble", 70));
                 if ( await PutBytes( resourcesBinary, firstFreeIndex, TransferType.Resources ) == false )
                     throw new PebbleException( string.Format( "Failed to send application resources {0}/app_resources.pbpack", bundle.FullPath ) );
             }
+            if (progress != null)
+                progress.Report(new ProgressValue("Adding app", 90));
             AddApp( firstFreeIndex );
+            if (progress != null)
+                progress.Report(new ProgressValue("Done", 100));
         }
 
         #endregion
