@@ -4,7 +4,7 @@
         xmlns:viewModels="clr-namespace:Windows.Pebble.ViewModels" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
+        xmlns:flint="clr-namespace:flint;assembly=flint" mc:Ignorable="d"
         Title="Pebble" Height="350" Width="525">
     <Window.DataContext>
         <viewModels:MainWindowViewModel />
@@ -38,6 +38,15 @@
         </Grid>
         <TabControl DataContext="{Binding PebbleDevices/}" Grid.Row="2" Margin="0,10,0,0"
                     d:DataContext="{d:DesignInstance viewModels:PebbleViewModel}">
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Style.Triggers>
+                        <Trigger Property="IsEnabled" Value="True">
+                            <Setter Property="IsSelected" Value="{Binding IsSelected}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </TabControl.Resources>
             <TabControl.Style>
                 <Style TargetType="TabControl">
                     <Style.Triggers>
@@ -50,13 +59,47 @@
                     </Style.Triggers>
                 </Style>
             </TabControl.Style>
-            <TabItem Header="Info" DataContext="{Binding PebbleInfo}" IsSelected="{Binding IsSelected}">
-                <StackPanel Margin="10">
-                    <TextBlock Text="{Binding PebbleTime, StringFormat='Pebble Time: {0:G}'}" />
-                    <TextBlock Text="{Binding CurrentTime, StringFormat='System Time: {0:G}'}" />
-                </StackPanel>
+            <TabItem Header="Info" DataContext="{Binding PebbleInfo}">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="{Binding PebbleTime, StringFormat='Pebble Time: {0:G}'}" />
+                        <TextBlock Text="{Binding CurrentTime, StringFormat='System Time: {0:G}'}" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" Margin="0,5,0,0">
+                        <Grid.Resources>
+                            <DataTemplate x:Key="FirmwareTemplate" DataType="flint:FirmwareVersion">
+                                <TextBlock>
+                                    <Run Text="{Binding Version, StringFormat='Version: {0}', Mode=OneWay}"/>
+                                    <LineBreak/>
+                                    <Run Text="{Binding Commit, StringFormat='Commit: {0}', Mode=OneWay}"/>
+                                    <Run Text="{Binding Timestamp, StringFormat='({0:d})', Mode=OneWay}"/>
+                                    <LineBreak/>
+                                    <Run Text="{Binding HardwarePlatform, StringFormat='Hardware Platform: {0}', Mode=OneWay}"/>
+                                    <LineBreak/>
+                                    <Run Text="{Binding MetadataVersion, StringFormat='Metadata Version: {0}', Mode=OneWay}"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </Grid.Resources>
+                        
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+
+                        <GroupBox Header="Firmware">
+                            <ContentPresenter Content="{Binding Firmware}" ContentTemplate="{StaticResource FirmwareTemplate}" Margin="10"/>
+                        </GroupBox>
+                        <GroupBox Header="Recovery Firmware" Grid.Column="1">
+                            <ContentPresenter Content="{Binding RecoveryFirmware}" ContentTemplate="{StaticResource FirmwareTemplate}" Margin="10"/>
+                        </GroupBox>
+                    </Grid>
+                </Grid>
             </TabItem>
-            <TabItem Header="Apps" DataContext="{Binding PebbleApps}" IsSelected="{Binding IsSelected}">
+            <TabItem Header="Apps" DataContext="{Binding PebbleApps}">
                 <GroupBox Header="Installed Apps" Grid.Row="1" Margin="0,5">
                     <Grid Margin="10">
                         <Grid.RowDefinitions>

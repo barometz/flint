@@ -122,13 +122,6 @@ namespace flint
         // Time in ms to wait before considering the recurring ping to be dead
         public int PingTimeout { get; set; }
 
-        /** Pebble version info **/
-
-        /// <summary>The main firmware installed on the Pebble. </summary>
-        public FirmwareVersion Firmware { get; private set; }
-        /// <summary> The recovery firmware installed on the Pebble. </summary>
-        public FirmwareVersion RecoveryFirmware { get; private set; }
-
         private readonly PebbleProtocol _PebbleProt;
         private uint _SessionCaps = (uint)SessionCaps.GAMMA_RAY;
         private uint _RemoteCaps = (uint)( RemoteCaps.Telephony | RemoteCaps.SMS | RemoteCaps.Android );
@@ -190,6 +183,7 @@ namespace flint
         public static List<Pebble> DetectPebbles()
         {
             var client = new BluetoothClient();
+
             // A list of all BT devices that are paired, in range, and named "Pebble *" 
             var btlist = client.DiscoverDevices( 20, true, false, false ).
                 Where( bdi => bdi.DeviceName.StartsWith( "Pebble " ) );
@@ -395,7 +389,7 @@ namespace flint
             SendMessageAsync( Endpoints.Ping, cookie );
         }
 
-        public async Task InstallApp( PebbleBundle bundle )
+        public async Task InstallAppAsync( PebbleBundle bundle )
         {
             if ( bundle == null )
                 throw new ArgumentNullException( "bundle" );
@@ -446,18 +440,9 @@ namespace flint
 
         #region Requests to send to Pebble
 
-        /// <summary> Get the Pebble's version info.  </summary>
-        /// <param name="async">If true, return immediately.  If false, wait until the response 
-        /// has been received.</param>
-        public void GetVersion( bool async = false )
+        public async Task<FirmwareResponse> GetFirmwareVersionAsync()
         {
-            byte[] data = { 0 };
-            SendMessageAsync( Endpoints.Version, data );
-            if ( !async )
-            {
-                var wait = new EndpointSync<MessageReceivedEventArgs>( this, Endpoints.Version );
-                wait.WaitAndReturn( timeout: 5000 );
-            }
+            return await SendMessageAsync<FirmwareResponse>( Endpoints.Version, new byte[] { 0 } );
         }
 
         /// <summary>
@@ -468,7 +453,7 @@ namespace flint
         /// <returns>A TimeReceivedEventArgs with the time, or null.</returns>
         public async Task<TimeResponse> GetTimeAsync()
         {
-            return  await SendMessageAsync<TimeResponse>( Endpoints.Time, new byte[] {0} );
+            return await SendMessageAsync<TimeResponse>( Endpoints.Time, new byte[] { 0 } );
         }
 
         /// <summary>
@@ -623,12 +608,6 @@ namespace flint
                     h( this, new MessageReceivedEventArgs( endpoint, e.Payload ) );
                 }
             }
-        }
-
-        private void VersionReceived( object sender, MessageReceivedEventArgs e )
-        {
-            Firmware = ParseVersion( e.Payload.Skip( 1 ).Take( 47 ).ToArray() );
-            RecoveryFirmware = ParseVersion( e.Payload.Skip( 48 ).Take( 47 ).ToArray() );
         }
 
         private void PhoneVersionReceived( object sender, MessageReceivedEventArgs e )

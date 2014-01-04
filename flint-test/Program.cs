@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using flint;
 using SharpMenu;
 using System.Collections.Generic;
+using flint.Responses;
 
 namespace flint_test
 {
@@ -86,10 +87,12 @@ namespace flint_test
             // Subscribe to an event for a particular endpoint
             pebble.RegisterEndpointCallback(Pebble.Endpoints.Ping, pingReceived);
 
-            pebble.GetVersion();
-            Console.WriteLine(pebble.Firmware);
-            Console.WriteLine(pebble.RecoveryFirmware);
-
+            FirmwareResponse firmwareResponse = pebble.GetFirmwareVersionAsync().Result;
+            if (firmwareResponse.Success)
+            {
+                Console.WriteLine(firmwareResponse.Firmware);
+                Console.WriteLine(firmwareResponse.RecoveryFirmware);
+            }
             while (pebble.Alive)
             {
                 menu.WriteMenu();

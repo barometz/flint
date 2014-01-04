@@ -63,6 +63,7 @@
   <ItemGroup>
     <Compile Include="AppBank.cs" />
     <Compile Include="Responses\AppbankRetrievedResponse.cs" />
+    <Compile Include="Responses\FirmwareResponse.cs" />
     <Compile Include="Responses\ResponseBase.cs" />
     <Compile Include="Crc32.cs" />
     <Compile Include="EndpointSync.cs" />

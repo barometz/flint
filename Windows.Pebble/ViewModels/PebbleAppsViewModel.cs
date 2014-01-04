@@ -101,7 +101,7 @@ namespace Windows.Pebble.ViewModels
 
                 if ( _pebble.Alive == false )
                     _pebble.Connect();
-                await _pebble.InstallApp( bundle );
+                await _pebble.InstallAppAsync( bundle );
                 await LoadAppsAsync();
             }
         }
