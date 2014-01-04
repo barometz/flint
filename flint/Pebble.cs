@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using InTheHand.Net.Sockets;
@@ -10,6 +9,7 @@ using System.Linq;
 using System.Management;
 using System.Text;
 using Ionic.Zip;
+using flint.Responses;
 
 namespace flint
 {
@@ -44,7 +44,7 @@ namespace flint
             AppManager = 6000,
             RunKeeper = 7000,
             PutBytes = 48879,
-            MaxEndpoint = 65535
+            MaxEndpoint = 65535 //ushort.MaxValue
         }
 
         /// <summary> Media control instructions as understood by Pebble </summary>
@@ -65,22 +65,22 @@ namespace flint
         [Flags]
         public enum RemoteCaps : uint
         {
-            UNKNOWN = 0,
+            Unknown = 0,
             IOS = 1,
-            ANDROID = 2,
+            Android = 2,
             OSX = 3,
-            LINUX = 4,
-            WINDOWS = 5,
-            TELEPHONY = 16,
+            Linux = 4,
+            Windows = 5,
+            Telephony = 16,
             SMS = 32,
             GPS = 64,
             BTLE = 128,
             // 240? No, that doesn't make sense.  But it's apparently true.
-            CAMERA_FRONT = 240,
-            CAMERA_REAR = 256,
-            ACCEL = 512,
-            GYRO = 1024,
-            COMPASS = 2048
+            CameraFront = 240,
+            CameraRear = 256,
+            Accelerometer = 512,
+            Gyro = 1024,
+            Compass = 2048
         }
 
         private enum TransferType : byte
@@ -92,27 +92,15 @@ namespace flint
             Binary = 5
         }
 
-        /// <summary> Occurs when the Pebble (is considered to have) disconnected, 
-        /// either by manual disconnect or through a ping timeout.
-        /// </summary>
-        public event EventHandler OnDisconnect = delegate { };
-        /// <summary> Occurs when the serial interface has successfully connected.
-        /// Does not guarantee that the connection actually works.
-        /// </summary>
-        public event EventHandler OnConnect = delegate { };
-
         /// <summary> Received a full message (any message with complete endpoint and payload) 
         /// from the Pebble.
         /// </summary>
         public event EventHandler<MessageReceivedEventArgs> MessageReceived = delegate { };
         /// <summary> Received a LOGS message from the Pebble. </summary>
         public event EventHandler<LogReceivedEventArgs> LogReceived = delegate { };
-        /// <summary> Received a PING message from the Pebble, presumably in response. </summary>
-        public event EventHandler<PingReceivedEventArgs> PingReceived = delegate { };
         /// <summary> Received a music control message (next/prev/playpause) from the Pebble. </summary>
         public event EventHandler<MediaControlReceivedEventArgs> MediaControlReceived = delegate { };
 
-        public event EventHandler<AppbankContentsReceivedEventArgs> AppbankContentsReceived = delegate { };
         public event EventHandler<AppbankInstallMessageEventArgs> AppbankInstallMessage = delegate { };
         /// <summary> Holds callbacks for the separate endpoints.  
         /// Saves a lot of typing. There's probably a good reason not to do this.
@@ -144,7 +132,7 @@ namespace flint
 
         private readonly PebbleProtocol _PebbleProt;
         private uint _SessionCaps = (uint)SessionCaps.GAMMA_RAY;
-        private uint _RemoteCaps = (uint)( RemoteCaps.TELEPHONY | RemoteCaps.SMS | RemoteCaps.ANDROID );
+        private uint _RemoteCaps = (uint)( RemoteCaps.Telephony | RemoteCaps.SMS | RemoteCaps.Android );
 
         /// <summary> Create a new Pebble 
         /// </summary>
@@ -247,7 +235,6 @@ namespace flint
         {
             _PebbleProt.Connect();
             Alive = true;
-            OnConnect( this, EventArgs.Empty );
         }
 
         /// <summary>
@@ -265,7 +252,6 @@ namespace flint
                 // disconnected, although the port will probably be in an invalid state.  Need to 
                 // find a good way to handle that.
                 Alive = false;
-                OnDisconnect( this, EventArgs.Empty );
             }
         }
 
@@ -311,19 +297,12 @@ namespace flint
         /// <param name="cookie"></param>
         /// <param name="async">If true, return null immediately and let the caller wait for a PING event.  If false, 
         /// wait for the reply and return the PingReceivedEventArgs.</param>
-        public PingReceivedEventArgs Ping( uint cookie = 0, bool async = false )
+        public async Task<PingResponse> PingAsync( uint cookie = 0, bool async = false )
         {
-            var _cookie = new byte[5];
-            // No need to worry about endianness as it's sent back byte for byte anyway.  
-            Array.Copy( BitConverter.GetBytes( cookie ), 0, _cookie, 1, 4 );
+            // No need to worry about endianness as it's sent back byte for byte anyway.
+            byte[] pingData = BitConverter.GetBytes( cookie );
 
-            SendMessageAsync( Endpoints.Ping, _cookie );
-            if ( !async )
-            {
-                var wait = new EndpointSync<PingReceivedEventArgs>( this, Endpoints.Ping );
-                return wait.WaitAndReturn();
-            }
-            return null;
+            return await SendMessageAsync<PingResponse>( Endpoints.Ping, pingData );
         }
 
         /// <summary> Generic notification support.  Shouldn't have to use this, but feel free. </summary>
@@ -426,9 +405,9 @@ namespace flint
             var uuid = metaData.UUID;
             RemoveAppByUUID( uuid );
 
-            AppbankContentsReceivedEventArgs appBankResult = await GetAppbankContentsAsync();
+            AppbankRetrievedResponse appBankResult = await GetAppbankContentsAsync();
 
-            if ( appBankResult == null )
+            if ( appBankResult.Success == false )
                 throw new PebbleException( "Could not obtain app list; try again" );
             var appBank = appBankResult.AppBank;
 
@@ -501,12 +480,9 @@ namespace flint
         /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
         /// the appropriate AppbankContentsReceivedEventArgs.</param>
         /// <returns></returns>
-        public async Task<AppbankContentsReceivedEventArgs> GetAppbankContentsAsync()
+        public async Task<AppbankRetrievedResponse> GetAppbankContentsAsync()
         {
-            byte[] result = await SendMessageAsync( Endpoints.AppManager, new byte[] { 1 } );
-            if ( result != null )
-                return new AppbankContentsReceivedEventArgs( result );
-            return null;
+            return await SendMessageAsync<AppbankRetrievedResponse>( Endpoints.AppManager, new byte[] { 1 } );
         }
 
         /// <summary>
@@ -558,10 +534,10 @@ namespace flint
                                                                _PebbleProt.RawMessageReceived -= eventHandler;
                                                                resetEvent.Set();
                                                            }
-                                                           else if (e.Endpoint == (ushort) Endpoints.Logs)
+                                                           else if ( e.Endpoint == (ushort)Endpoints.Logs )
                                                            {
-                                                               var args = new LogReceivedEventArgs(e.Payload);
-                                                               Debug.WriteLine("Logs received " + args.ToString());
+                                                               var args = new LogReceivedEventArgs( e.Payload );
+                                                               Debug.WriteLine( "Logs received " + args.ToString() );
                                                            }
                                                        };
                                     try
@@ -570,7 +546,7 @@ namespace flint
                                         {
                                             _PebbleProt.RawMessageReceived += eventHandler;
                                             _PebbleProt.SendMessage( (ushort)endpoint, payload );
-                                            if (resetEvent.WaitOne(TimeSpan.FromSeconds((5))))
+                                            if ( resetEvent.WaitOne( TimeSpan.FromSeconds( ( 5 ) ) ) )
                                                 return result;
                                         }
                                     }
@@ -580,6 +556,43 @@ namespace flint
                                     }
                                     return null;
                                 } );
+        }
+
+        private Task<T> SendMessageAsync<T>( Endpoints endpoint, byte[] payload )
+            where T : class, IResponse, new()
+        {
+            return Task.Run( () =>
+            {
+                var resetEvent = new ManualResetEvent( false );
+                T result = new T();
+
+                EventHandler<RawMessageReceivedEventArgs> eventHandler = null;
+                eventHandler = ( sender, e ) =>
+                {
+                    if ( e.Endpoint == (ushort)endpoint )
+                    {
+                        result.Load( e.Payload );
+                        _PebbleProt.RawMessageReceived -= eventHandler;
+                        resetEvent.Set();
+                    }
+                    else if ( e.Endpoint == (ushort)Endpoints.Logs )
+                    {
+                        var errorLog = new LogReceivedEventArgs( e.Payload );
+                        Debug.WriteLine( "Logs received " + errorLog );
+                        result.SetError( errorLog.ToString() );
+                        resetEvent.Set();
+                    }
+                };
+                lock ( _PebbleProt )
+                {
+                    _PebbleProt.RawMessageReceived += eventHandler;
+                    _PebbleProt.SendMessage( (ushort)endpoint, payload );
+                    if ( resetEvent.WaitOne( TimeSpan.FromSeconds( ( 5 ) ) ) )
+                        return result;
+                    result.SetError( "Timed out waiting for a response" );
+                }
+                return result;
+            } );
         }
 
         #region Pebble message event handlers
@@ -593,9 +606,9 @@ namespace flint
                 case Endpoints.Logs:
                     LogReceived( this, new LogReceivedEventArgs( e.Payload ) );
                     break;
-                case Endpoints.Ping:
-                    PingReceived( this, new PingReceivedEventArgs( e.Payload ) );
-                    break;
+                //case Endpoints.Ping:
+                //    PingReceived( this, new PingReceivedEventArgs( e.Payload ) );
+                //    break;
                 case Endpoints.MusicControl:
                     MediaControlReceived( this, new MediaControlReceivedEventArgs( e.Payload ) );
                     break;
@@ -637,18 +650,18 @@ namespace flint
             SendMessageAsync( Endpoints.PhoneVersion, msg );
         }
 
-        private void AppbankStatusResponseReceived( object sender, MessageReceivedEventArgs e )
-        {
-            switch ( e.Payload[0] )
-            {
-                case 1:
-                    AppbankContentsReceived( this, new AppbankContentsReceivedEventArgs( e.Payload ) );
-                    break;
-                case 2:
-                    AppbankInstallMessage( this, new AppbankInstallMessageEventArgs( e.Payload ) );
-                    break;
-            }
-        }
+        //private void AppbankStatusResponseReceived( object sender, MessageReceivedEventArgs e )
+        //{
+        //    switch ( e.Payload[0] )
+        //    {
+        //        case 1:
+        //            AppbankContentsReceived( this, new AppbankContentsReceivedEventArgs( e.Payload ) );
+        //            break;
+        //        case 2:
+        //            AppbankInstallMessage( this, new AppbankInstallMessageEventArgs( e.Payload ) );
+        //            break;
+        //    }
+        //}
 
         #endregion
 
@@ -703,9 +716,9 @@ namespace flint
             //Get token
             var header = ConcatByteArray( new byte[] { 1 }, length, new[] { (byte)transferType, index } );
             byte[] tokenResult = await SendMessageAsync( Endpoints.PutBytes, header );
-            if ( tokenResult == null || tokenResult.Length == 0 || tokenResult[0] != 1)
+            if ( tokenResult == null || tokenResult.Length == 0 || tokenResult[0] != 1 )
                 return false;
-            byte[] token = tokenResult.Skip(1).ToArray();
+            byte[] token = tokenResult.Skip( 1 ).ToArray();
 
             const int BUFFER_SIZE = 2000;
             //Send at most 2000 bytes at a time

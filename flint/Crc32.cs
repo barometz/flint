@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace flint
 {
-    public static class Crc32
+    internal static class Crc32
     {
         private const uint CRC_POLY = 0x04C11DB7;
 

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Windows.Threading;
+﻿using System.Linq;
 using GalaSoft.MvvmLight;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,7 +12,6 @@ namespace Windows.Pebble.ViewModels
 
         public MainWindowViewModel()
         {
-
             if ( IsInDesignMode == false )
             {
                 _pebbleDevices = new List<PebbleViewModel>( flint.Pebble.DetectPebbles().Select( x => new PebbleViewModel( x ) ) );
@@ -25,33 +22,5 @@ namespace Windows.Pebble.ViewModels
         {
             get { return CollectionViewSource.GetDefaultView( _pebbleDevices ); }
         }
-
-
-        //private flint.Pebble GetCurrentPebble()
-        //{
-        //    flint.Pebble currentPebble = null;
-        //    var pebbleViewModel = (PebbleViewModel)PebbleDevices.CurrentItem;
-        //    if ( pebbleViewModel != null )
-        //    {
-        //        currentPebble = pebbleViewModel.GetPebble();
-        //
-        //        if ( currentPebble != null && currentPebble.Alive == false )
-        //            currentPebble.Connect();
-        //    }
-        //    return currentPebble;
-        //}
-        //
-        //private void UpdateTimes( object sender, EventArgs e )
-        //{
-        //    var pebble = GetCurrentPebble();
-        //
-        //    if ( pebble != null )
-        //        PebbleTime = pebble.GetTime().Time;
-        //    else
-        //        PebbleTime = null;
-        //
-        //    RaisePropertyChanged(() => CurrentTime);
-        //}
-
     }
 }

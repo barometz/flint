@@ -1,26 +1,64 @@
 ﻿<Window x:Class="Windows.Pebble.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:viewModels="clr-namespace:Windows.Pebble.ViewModels" Title="Pebble" Height="350" Width="525">
+        xmlns:viewModels="clr-namespace:Windows.Pebble.ViewModels" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Pebble" Height="350" Width="525">
     <Window.DataContext>
         <viewModels:MainWindowViewModel />
     </Window.DataContext>
-    <StackPanel Margin="10">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
         <TextBlock Text="Select Pebble" />
-        <ComboBox ItemsSource="{Binding PebbleDevices}" IsSynchronizedWithCurrentItem="True" DisplayMemberPath="PebbleId" />
-
-        <GroupBox Header="Pebble Info" DataContext="{Binding PebbleDevices/}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition />
-                </Grid.RowDefinitions>
-                <StackPanel>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ComboBox ItemsSource="{Binding PebbleDevices}" IsSynchronizedWithCurrentItem="True" DisplayMemberPath="PebbleId" />
+            <Button Command="{Binding PebbleDevices/ToggleConnectionCommand}" Grid.Column="1">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Content" Value="Connect" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding PebbleDevices/IsConnected}" Value="True">
+                                <Setter Property="Content" Value="Disconnect" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </Grid>
+        <TabControl DataContext="{Binding PebbleDevices/}" Grid.Row="2" Margin="0,10,0,0"
+                    d:DataContext="{d:DesignInstance viewModels:PebbleViewModel}">
+            <TabControl.Style>
+                <Style TargetType="TabControl">
+                    <Style.Triggers>
+                        <Trigger Property="DataContext" Value="{x:Null}">
+                            <Setter Property="IsEnabled" Value="False" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                            <Setter Property="IsEnabled" Value="False" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TabControl.Style>
+            <TabItem Header="Info" DataContext="{Binding PebbleInfo}" IsSelected="{Binding IsSelected}">
+                <StackPanel Margin="10">
                     <TextBlock Text="{Binding PebbleTime, StringFormat='Pebble Time: {0:G}'}" />
                     <TextBlock Text="{Binding CurrentTime, StringFormat='System Time: {0:G}'}" />
                 </StackPanel>
+            </TabItem>
+            <TabItem Header="Apps" DataContext="{Binding PebbleApps}" IsSelected="{Binding IsSelected}">
                 <GroupBox Header="Installed Apps" Grid.Row="1" Margin="0,5">
-                    <Grid>
+                    <Grid Margin="10">
                         <Grid.RowDefinitions>
                             <RowDefinition />
                             <RowDefinition Height="Auto"/>
@@ -34,7 +72,7 @@
                             <ListBox.Style>
                                 <Style TargetType="ListBox">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Apps.Count}" Value="0">
+                                        <DataTrigger Binding="{Binding Apps.IsEmpty}" Value="True">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -44,21 +82,20 @@
                         <TextBlock Text="No Apps Installed">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Apps.Count}" Value="0">
-                                            <Setter Property="Visibility" Value="Visible" />
+                                        <DataTrigger Binding="{Binding Apps.IsEmpty}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <Grid Grid.Row="1" Margin="0,10">
+                        <Grid Grid.Row="1" Margin="0,10,0,0">
                             <Button Content="Install App" Command="{Binding InstallAppCommand}" Grid.Column="1" HorizontalAlignment="Left" Padding="10,2"/>
                         </Grid>
                     </Grid>
                 </GroupBox>
-            </Grid>
-        </GroupBox>
-    </StackPanel>
+            </TabItem>
+        </TabControl>
+    </Grid>
 </Window>

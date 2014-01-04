@@ -74,6 +74,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="ViewModels\PebbleAppsViewModel.cs" />
+    <Compile Include="ViewModels\PebbleInfoViewModel.cs" />
     <Compile Include="ViewModels\PebbleViewModel.cs" />
     <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
