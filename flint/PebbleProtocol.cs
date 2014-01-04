@@ -25,8 +25,8 @@ namespace flint
         private WaitingStates _WaitingState;
 
         private readonly SerialPort _SerialPort;
-        private UInt16 _CurrentPayloadSize;
-        private UInt16 _CurrentEndpoint;
+        private ushort _CurrentPayloadSize;
+        private ushort _CurrentEndpoint;
 
         /// <summary> Create a new Pebble connection </summary>
         /// <param name="port"></param>
@@ -36,8 +36,6 @@ namespace flint
             _SerialPort = new SerialPort( port, 19200 );
             _SerialPort.ReadTimeout = 500;
             _SerialPort.WriteTimeout = 500;
-
-
 
             _SerialPort.DataReceived += serialPortDataReceived;
             _SerialPort.ErrorReceived += serialPortErrorReceived;
@@ -77,12 +75,12 @@ namespace flint
                 Array.Reverse( payloadSize );
                 Array.Reverse( _endPoint );
             }
-#if DEBUG
-            Console.WriteLine( "Sending message.." );
-            Console.WriteLine( "\tPLS: " + BitConverter.ToString( payloadSize ) );
-            Console.WriteLine( "\tEP:  " + BitConverter.ToString( _endPoint ) );
-            Console.WriteLine( "\tPL:  " + BitConverter.ToString( payload ) );
-#endif
+            
+            //Debug.WriteLine( "Sending message.." );
+            //Debug.WriteLine( "\tPLS: " + BitConverter.ToString( payloadSize ) );
+            //Debug.WriteLine( "\tEP:  " + BitConverter.ToString( _endPoint ) );
+            //Debug.WriteLine( "\tPL:  " + BitConverter.ToString( payload ) );
+
             _SerialPort.Write( payloadSize, 0, 2 );
             _SerialPort.Write( _endPoint, 0, 2 );
             _SerialPort.Write( payload, 0, length );
@@ -144,11 +142,11 @@ namespace flint
                         }
                         _CurrentPayloadSize = BitConverter.ToUInt16( payloadSize, 0 );
                         _CurrentEndpoint = BitConverter.ToUInt16( endpoint, 0 );
-#if DEBUG
-                        Debug.WriteLine( "Message metadata received:" );
-                        Debug.WriteLine( "\tPLS: " + _CurrentPayloadSize.ToString() );
-                        Debug.WriteLine( "\tEP:  " + _CurrentEndpoint.ToString() );
-#endif
+
+                        //Debug.WriteLine( "Message metadata received:" );
+                        //Debug.WriteLine( "\tPLS: " + _CurrentPayloadSize.ToString() );
+                        //Debug.WriteLine( "\tEP:  " + _CurrentEndpoint.ToString() );
+
                         _WaitingState = WaitingStates.Payload;
                         return true;
                     }

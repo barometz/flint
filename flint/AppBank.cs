@@ -14,6 +14,8 @@ namespace flint
     /// </remarks>
     public class AppBank
     {
+        public const int MINIMUM_HEADER_SIZE = 9;
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         public struct App
         {
@@ -51,10 +53,9 @@ namespace flint
         /// <param name="bytes">The entire payload from an appropriate APP_MANAGER message.</param>
         public AppBank(byte[] bytes)
         {
-            const int headerSize = 9;
             const int appInfoSize = 78;
             Apps = new List<App>();
-            if (bytes.Length < headerSize)
+            if (bytes.Length < MINIMUM_HEADER_SIZE)
             {
                 throw new ArgumentOutOfRangeException("Payload is shorter than 9 bytes, "+
                     "which is the minimum size for an appbank content response.");
@@ -68,14 +69,14 @@ namespace flint
             Size = BitConverter.ToUInt32(bytes, 1);
             
             uint appCount = BitConverter.ToUInt32(bytes, 5);
-            if (bytes.Count() < headerSize + appCount * appInfoSize)
+            if (bytes.Length < MINIMUM_HEADER_SIZE + appCount * appInfoSize)
             {
                 throw new ArgumentOutOfRangeException("Payload is not large enough for the claimed number of installed apps.");
             }
 
             for (int i = 0; i < appCount; i++)
             {
-                Apps.Add(AppFromBytes(bytes.Skip(headerSize + i * appInfoSize).Take(appInfoSize).ToArray()));
+                Apps.Add(AppFromBytes(bytes.Skip(MINIMUM_HEADER_SIZE + i * appInfoSize).Take(appInfoSize).ToArray()));
             }
         }
 

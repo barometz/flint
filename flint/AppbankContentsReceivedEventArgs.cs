@@ -17,4 +17,24 @@
         {
         }
     }
+
+    public class AppbankRetrievedResult : ISendMessageResult
+    {
+        private readonly AppBank _appBank;
+
+        public AppbankRetrievedResult()
+        {
+            _appBank = new AppBank(null);
+        }
+
+        public bool LoadIfValid( byte[] payload )
+        {
+            return false;
+        }
+
+        public AppBank AppBank
+        {
+            get { return _appBank; }
+        }
+    }
 }

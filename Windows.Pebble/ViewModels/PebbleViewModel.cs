@@ -14,11 +14,11 @@ namespace Windows.Pebble.ViewModels
 {
     public class PebbleViewModel : ViewModelBase
     {
-        private readonly DispatcherTimer _timer = new DispatcherTimer(DispatcherPriority.Background);
-        private readonly List<AppBank.App> _apps = new List<AppBank.App>();
+        private readonly DispatcherTimer _timer = new DispatcherTimer( DispatcherPriority.Background );
+        private readonly BindingList<AppBank.App> _apps = new BindingList<AppBank.App>();
 
         private readonly RelayCommand<AppBank.App> _removeAppCommand;
-        private readonly RelayCommand _installAppCommand; 
+        private readonly RelayCommand _installAppCommand;
 
         private readonly flint.Pebble _pebble;
         public PebbleViewModel( flint.Pebble pebble )
@@ -26,14 +26,14 @@ namespace Windows.Pebble.ViewModels
             if ( pebble == null ) throw new ArgumentNullException( "pebble" );
             _pebble = pebble;
 
-            _removeAppCommand = new RelayCommand<AppBank.App>(OnRemoveApp);
-            _installAppCommand = new RelayCommand(OnInstallApp);
+            _removeAppCommand = new RelayCommand<AppBank.App>( OnRemoveApp );
+            _installAppCommand = new RelayCommand( OnInstallApp );
 
             LoadApps();
 
-            _timer.Tick += ( sender, e ) => UpdateTimes();
-            _timer.Interval = TimeSpan.FromMilliseconds(500);
-            _timer.Start();
+            //_timer.Tick += ( sender, e ) => UpdateTimes();
+            //_timer.Interval = TimeSpan.FromMilliseconds( 500 );
+            //_timer.Start();
 
             //RemoveAllApps();
             //TestInstall();
@@ -76,39 +76,43 @@ namespace Windows.Pebble.ViewModels
             get { return _installAppCommand; }
         }
 
-        private void UpdateTimes()
+        private async void UpdateTimes()
         {
             if ( _pebble.Alive == false )
                 _pebble.Connect();
 
-            PebbleTime = _pebble.GetTime().Time;
+            TimeReceivedEventArgs timeResult = await _pebble.GetTimeAsync();
+
+            if ( timeResult != null )
+                PebbleTime = timeResult.Time;
 
             RaisePropertyChanged( () => CurrentTime );
         }
 
-        private void OnRemoveApp( AppBank.App app )
+        private async void OnRemoveApp( AppBank.App app )
         {
             if ( _pebble.Alive == false )
                 _pebble.Connect();
 
             _timer.Stop();
-            _pebble.RemoveApp(app);
-            //LoadApps();
+            await _pebble.RemoveAppAsync( app );
+            await LoadApps();
             _timer.Start();
         }
 
-        private void LoadApps()
+        private async Task LoadApps()
         {
             if ( _pebble.Alive == false )
                 _pebble.Connect();
 
-            var appBankContents = _pebble.GetAppbankContents();
+            var appBankContents = await _pebble.GetAppbankContentsAsync();
             _apps.Clear();
-            _apps.AddRange( appBankContents.AppBank.Apps );
+            foreach ( var app in appBankContents.AppBank.Apps )
+                _apps.Add( app );
         }
 
 
-        private void OnInstallApp()
+        private async void OnInstallApp()
         {
             var openDialog = new OpenFileDialog
                                  {
@@ -119,15 +123,15 @@ namespace Windows.Pebble.ViewModels
                                      RestoreDirectory = true,
                                      Title = "Pebble App"
                                  };
-            if (openDialog.ShowDialog() == true)
+            if ( openDialog.ShowDialog() == true )
             {
                 _timer.Stop();
                 var bundle = new PebbleBundle( openDialog.FileName );
 
                 if ( _pebble.Alive == false )
                     _pebble.Connect();
-                _pebble.InstallApp( bundle );
-                //LoadApps();
+                await _pebble.InstallApp( bundle );
+                await LoadApps();
                 _timer.Start();
             }
         }

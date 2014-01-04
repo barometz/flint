@@ -46,7 +46,7 @@ namespace flint
             Array.Copy(Payload, 8, _filename, 0, 16);
             Array.Copy(Payload, 24, _data, 0, messageSize);
 
-            Filename = Encoding.UTF8.GetString(_filename);
+            Filename = Encoding.UTF8.GetString(_filename).TrimEnd('\0');
             Message = Encoding.UTF8.GetString(_data);
         }
 
@@ -57,7 +57,7 @@ namespace flint
 
         public override string ToString()
         {
-            const string template = "{0} {1,3} {2}:{3,3} {4}";
+            const string template = "{0} {1,3} {2}({3,3}) {4}";
             return string.Format(template, Timestamp, Level, Filename, LineNo, Message);
         }
     }
