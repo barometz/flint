@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using GalaSoft.MvvmLight;
+using Windows.Pebble.Messages;
 using flint;
 using flint.Responses;
 
@@ -10,26 +11,15 @@ namespace Windows.Pebble.ViewModels
     public class PebbleInfoViewModel : ViewModelBase
     {
         private readonly DispatcherTimer _timer = new DispatcherTimer( DispatcherPriority.Background );
-        private readonly flint.Pebble _pebble;
+        private flint.Pebble _pebble;
 
-        public PebbleInfoViewModel( flint.Pebble pebble )
+        public PebbleInfoViewModel( )
         {
-            _pebble = pebble;
             _timer.Tick += ( sender, e ) => UpdateTimes();
-            _timer.Interval = TimeSpan.FromMilliseconds( 500 );
-        }
+            _timer.Interval = TimeSpan.FromSeconds( 1 );
 
-        private bool _IsSelected;
-        public bool IsSelected
-        {
-            get { return _IsSelected; }
-            set
-            {
-                if ( Set( () => IsSelected, ref _IsSelected, value ))
-                {
-                    LoadValuesAsync();
-                }
-            }
+            MessengerInstance.Register<PebbleConnected>( this, OnPebbleConnected );
+            MessengerInstance.Register<PebbleDisconnected>( this, OnPebbleDisconnected );
         }
 
         private DateTime? _PebbleTime;
@@ -58,30 +48,29 @@ namespace Windows.Pebble.ViewModels
             set { Set(() => RecoveryFirmware, ref _RecoveryFirmware, value); }
         }
 
-        public async Task OnConnectedAsync()
+        private async void OnPebbleConnected( PebbleConnected pebbleConnected )
         {
-            await LoadValuesAsync();
-        }
+            _pebble = pebbleConnected.Pebble;
 
-        public async Task OnDisconnectedAsync()
-        {
-            await LoadValuesAsync();
-        }
-
-        private async Task LoadValuesAsync()
-        {
-            if ( IsSelected && _pebble.Alive )
+            if ( _pebble != null && _pebble.Alive )
             {
                 _timer.Start();
                 await LoadFirmwareAsync();
             }
-            else
+        }
+
+        private void OnPebbleDisconnected( PebbleDisconnected pebbleDisconnected )
+        {
+            if ( pebbleDisconnected.Pebble == _pebble )
+            {
+                _pebble = null;
                 _timer.Stop();
+            }
         }
 
         private async void UpdateTimes()
         {
-            if (_pebble.Alive)
+            if (_pebble != null && _pebble.Alive)
             {
                 TimeResponse timeResult = await _pebble.GetTimeAsync();
                 if (timeResult.Success)
@@ -93,7 +82,7 @@ namespace Windows.Pebble.ViewModels
 
         private async Task LoadFirmwareAsync()
         {
-            if ( _pebble.Alive == false )
+            if ( _pebble == null || _pebble.Alive == false )
                 return;
 
             FirmwareResponse firmwareResponse = await _pebble.GetFirmwareVersionAsync();

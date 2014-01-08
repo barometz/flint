@@ -28,7 +28,7 @@ namespace flint
         {
             Firmware = 1,
             Time = 11,
-            Version = 16,
+            FirmwareVersion = 16,
             PhoneVersion = 17,
             SystemMessage = 18,
             MusicControl = 32,
@@ -45,16 +45,6 @@ namespace flint
             RunKeeper = 7000,
             PutBytes = 48879,
             MaxEndpoint = 65535 //ushort.MaxValue
-        }
-
-        /// <summary> Media control instructions as understood by Pebble </summary>
-        public enum MediaControls
-        {
-            PlayPause = 1,
-            Forward = 4,
-            Previous = 5,
-            // PlayPause also sends 8 for some reason.  To be figured out.
-            Other = 8
         }
 
         public enum SessionCaps : uint
@@ -98,13 +88,14 @@ namespace flint
         public event EventHandler<MessageReceivedEventArgs> MessageReceived = delegate { };
         /// <summary> Received a LOGS message from the Pebble. </summary>
         public event EventHandler<LogReceivedEventArgs> LogReceived = delegate { };
-        /// <summary> Received a music control message (next/prev/playpause) from the Pebble. </summary>
-        public event EventHandler<MediaControlReceivedEventArgs> MediaControlReceived = delegate { };
 
         /// <summary> Holds callbacks for the separate endpoints.  
         /// Saves a lot of typing. There's probably a good reason not to do this.
         /// </summary>
         private readonly Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>> endpointEvents;
+
+        private readonly Dictionary<Type, List<CallbackContainer>> _callbackHandlers;
+        private static readonly Dictionary<Endpoints, Type> _endpointToResponseMap;
 
         /// <summary> The four-char ID for the Pebble, based on its BT address. 
         /// </summary>
@@ -126,6 +117,17 @@ namespace flint
         private uint _SessionCaps = (uint)SessionCaps.GAMMA_RAY;
         private uint _RemoteCaps = (uint)( RemoteCaps.Telephony | RemoteCaps.SMS | RemoteCaps.Android );
 
+        static Pebble()
+        {
+            _endpointToResponseMap = new Dictionary<Endpoints, Type>();
+            _endpointToResponseMap.Add( Endpoints.AppManager, typeof( AppbankResponse ) );
+            _endpointToResponseMap.Add( Endpoints.FirmwareVersion, typeof( FirmwareResponse ) );
+            _endpointToResponseMap.Add( Endpoints.Ping, typeof( PingResponse ) );
+            _endpointToResponseMap.Add( Endpoints.Time, typeof( TimeResponse ) );
+            _endpointToResponseMap.Add( Endpoints.MusicControl, typeof( MusicControlResponse) );
+
+        }
+
         /// <summary> Create a new Pebble 
         /// </summary>
         /// <param name="port">The serial port to connect to.</param>
@@ -136,6 +138,9 @@ namespace flint
             Alive = false;
             PingTimeout = 10000;
             PebbleID = pebbleId;
+
+            _callbackHandlers = new Dictionary<Type, List<CallbackContainer>>();
+
             _PebbleProt = new PebbleProtocol( port );
             _PebbleProt.RawMessageReceived += pebbleProtocolRawMessageReceived;
 
@@ -248,40 +253,24 @@ namespace flint
             }
         }
 
-        /// <summary> Subscribe to the event of a particular endpoint message 
-        /// being received.  This enables subscribing to any endpoint, 
-        /// including those that have yet to be discovered.
-        /// </summary>
-        /// <param name="endpoint"></param>
-        /// <param name="handler"></param>
-        public void RegisterEndpointCallback( Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler )
+        public void RegisterCallback<T>( Action<T> callback ) where T : IResponse, new()
         {
-            if ( handler == null )
-            {
-                throw new ArgumentNullException( "handler" );
-            }
-            if ( endpointEvents.ContainsKey( endpoint ) && endpointEvents[endpoint] != null )
-            {
-                endpointEvents[endpoint] += handler;
-            }
-            else
-            {
-                endpointEvents[endpoint] = ( o, m ) => { };
-                endpointEvents[endpoint] += handler;
-            }
+            if ( callback == null ) throw new ArgumentNullException( "callback" );
+
+            List<CallbackContainer> callbacks;
+            if ( _callbackHandlers.TryGetValue( typeof( T ), out callbacks ) == false )
+                _callbackHandlers[typeof( T )] = callbacks = new List<CallbackContainer>();
+
+            callbacks.Add( CallbackContainer.Create(callback) );
         }
 
-        /// <summary> Deregister a given callback for a given function. </summary>
-        /// <param name="endpoint"></param>
-        /// <param name="handler"></param>
-        public void UnregisterEndpointCallback( Endpoints endpoint, EventHandler<MessageReceivedEventArgs> handler )
+        public bool UnregisterCallback<T>( Action<T> callback ) where T : IResponse
         {
-            if ( endpointEvents.ContainsKey( endpoint )
-                && endpointEvents[endpoint] != null )
-            {
-                //TODO: Delegate subtraction is not reliable
-                endpointEvents[endpoint] -= handler;
-            }
+            if ( callback == null ) throw new ArgumentNullException( "callback" );
+            List<CallbackContainer> callbacks;
+            if ( _callbackHandlers.TryGetValue( typeof( T ), out callbacks ) )
+                return callbacks.Remove( callbacks.FirstOrDefault(x => x.IsMatch(callback)) );
+            return false;
         }
 
         #region Messages to Pebble
@@ -389,23 +378,25 @@ namespace flint
             SendMessageAsync( Endpoints.Ping, cookie );
         }
 
-        public async Task InstallAppAsync( PebbleBundle bundle,  IProgress<ProgressValue> progress = null)
+        public async Task InstallAppAsync( PebbleBundle bundle, IProgress<ProgressValue> progress = null )
         {
             if ( bundle == null )
                 throw new ArgumentNullException( "bundle" );
             if ( bundle.BundleType != PebbleBundle.BundleTypes.Application )
                 throw new ArgumentException( "Bundle must be an application" );
 
-            if (progress != null)
-                progress.Report(new ProgressValue("Removing previous install(s) of the app if they exist", 1));
+            if ( progress != null )
+                progress.Report( new ProgressValue( "Removing previous install(s) of the app if they exist", 1 ) );
             var metaData = bundle.AppMetadata;
             var uuid = metaData.UUID;
 
-            RemoveAppByUUID( uuid );
-            
-            if (progress != null)
-                progress.Report(new ProgressValue("Getting current apps", 10));
-            AppbankRetrievedResponse appBankResult = await GetAppbankContentsAsync();
+            AppbankInstallResponse appbankInstallResponse = await RemoveAppByUUID( uuid );
+            if ( appbankInstallResponse.Success == false )
+                return;
+
+            if ( progress != null )
+                progress.Report( new ProgressValue( "Getting current apps", 10 ) );
+            AppbankResponse appBankResult = await GetAppbankContentsAsync();
 
             if ( appBankResult.Success == false )
                 throw new PebbleException( "Could not obtain app list; try again" );
@@ -418,8 +409,8 @@ namespace flint
             if ( firstFreeIndex == appBank.Size )
                 throw new PebbleException( "All app banks are full" );
 
-            if (progress != null)
-                progress.Report(new ProgressValue("Reading app data", 30));
+            if ( progress != null )
+                progress.Report( new ProgressValue( "Reading app data", 30 ) );
 
             var zipFile = ZipFile.Read( bundle.FullPath );
             var appEntry = zipFile.Entries.FirstOrDefault( x => x.FileName == bundle.Manifest.Application.Filename );
@@ -428,8 +419,8 @@ namespace flint
 
             byte[] appBinary = GetBytes( appEntry );
 
-            if (progress != null)
-                progress.Report(new ProgressValue("Transferring app to Pebble", 50));
+            if ( progress != null )
+                progress.Report( new ProgressValue( "Transferring app to Pebble", 50 ) );
 
             if ( await PutBytes( appBinary, firstFreeIndex, TransferType.Binary ) == false )
                 throw new PebbleException( string.Format( "Failed to send application binary {0}/pebble-app.bin", bundle.FullPath ) );
@@ -441,16 +432,16 @@ namespace flint
                     throw new PebbleException( "Could not find resource file" );
 
                 byte[] resourcesBinary = GetBytes( resourcesEntry );
-                if (progress != null)
-                    progress.Report(new ProgressValue("Transferring app resources to Pebble", 70));
+                if ( progress != null )
+                    progress.Report( new ProgressValue( "Transferring app resources to Pebble", 70 ) );
                 if ( await PutBytes( resourcesBinary, firstFreeIndex, TransferType.Resources ) == false )
                     throw new PebbleException( string.Format( "Failed to send application resources {0}/app_resources.pbpack", bundle.FullPath ) );
             }
-            if (progress != null)
-                progress.Report(new ProgressValue("Adding app", 90));
+            if ( progress != null )
+                progress.Report( new ProgressValue( "Adding app", 90 ) );
             AddApp( firstFreeIndex );
-            if (progress != null)
-                progress.Report(new ProgressValue("Done", 100));
+            if ( progress != null )
+                progress.Report( new ProgressValue( "Done", 100 ) );
         }
 
         #endregion
@@ -459,7 +450,7 @@ namespace flint
 
         public async Task<FirmwareResponse> GetFirmwareVersionAsync()
         {
-            return await SendMessageAsync<FirmwareResponse>( Endpoints.Version, new byte[] { 0 } );
+            return await SendMessageAsync<FirmwareResponse>( Endpoints.FirmwareVersion, new byte[] { 0 } );
         }
 
         /// <summary>
@@ -479,9 +470,9 @@ namespace flint
         /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
         /// the appropriate AppbankContentsReceivedEventArgs.</param>
         /// <returns></returns>
-        public async Task<AppbankRetrievedResponse> GetAppbankContentsAsync()
+        public async Task<AppbankResponse> GetAppbankContentsAsync()
         {
-            return await SendMessageAsync<AppbankRetrievedResponse>( Endpoints.AppManager, new byte[] { 1 } );
+            return await SendMessageAsync<AppbankResponse>( Endpoints.AppManager, new byte[] { 1 } );
         }
 
         /// <summary>
@@ -491,18 +482,13 @@ namespace flint
         /// <param name="async">When true, this returns null immediately.  Otherwise it waits for the event and sends 
         /// the appropriate AppbankInstallMessageEventArgs.</param>
         /// <returns></returns>
-        public async Task<AppbankInstallMessageEventArgs> RemoveAppAsync( AppBank.App app )
+        public async Task<AppbankInstallResponse> RemoveAppAsync( AppBank.App app )
         {
             var msg = ConcatByteArray( new byte[] { 2 },
                 OrderByteArray( BitConverter.GetBytes( app.ID ) ),
                 OrderByteArray( BitConverter.GetBytes( app.Index ) ) );
 
-            byte[] result = await SendMessageAsync( Endpoints.AppManager, msg );
-            if ( result != null )
-            {
-                return new AppbankInstallMessageEventArgs( result );
-            }
-            return null;
+            return await SendMessageAsync<AppbankInstallResponse>( Endpoints.AppManager, msg );
         }
 
         #endregion
@@ -598,6 +584,18 @@ namespace flint
 
         private void pebbleProtocolRawMessageReceived( object sender, RawMessageReceivedEventArgs e )
         {
+            Type responseType;
+            if (_endpointToResponseMap.TryGetValue((Endpoints) e.Endpoint, out responseType))
+            {
+                //Check for callbacks
+                List<CallbackContainer> callbacks;
+                if (_callbackHandlers.TryGetValue(responseType, out callbacks))
+                {
+                    foreach (var callback in callbacks)
+                        callback.Invoke(e.Payload);
+                }
+            }
+
             Endpoints endpoint = (Endpoints)e.Endpoint;
             // Switch for the specific events
             switch ( endpoint )
@@ -608,9 +606,9 @@ namespace flint
                 //case Endpoints.Ping:
                 //    PingReceived( this, new PingReceivedEventArgs( e.Payload ) );
                 //    break;
-                case Endpoints.MusicControl:
-                    MediaControlReceived( this, new MediaControlReceivedEventArgs( e.Payload ) );
-                    break;
+                //case Endpoints.MusicControl:
+                //    MediaControlReceived( this, new MediaControlReceivedEventArgs( e.Payload ) );
+                //    break;
             }
 
             // Catchall:
@@ -681,12 +679,10 @@ namespace flint
 
         #endregion
 
-        private void RemoveAppByUUID( byte[] uuid )
+        private async Task<AppbankInstallResponse> RemoveAppByUUID( byte[] uuid )
         {
             byte[] data = ConcatByteArray( new byte[] { 2 }, uuid );
-            SendMessageAsync( Endpoints.AppManager, data );
-            var wait = new EndpointSync<AppbankInstallMessageEventArgs>( this, Endpoints.AppManager );
-            wait.WaitAndReturn();
+            return await SendMessageAsync<AppbankInstallResponse>( Endpoints.AppManager, data );
         }
 
         private async Task<bool> PutBytes( byte[] binary, byte index, TransferType transferType )
@@ -757,6 +753,34 @@ namespace flint
             for ( int i = 0, insertionPoint = 0; i < array.Length; insertionPoint += array[i].Length, i++ )
                 Array.Copy( array[i], 0, rv, insertionPoint, array[i].Length );
             return rv;
+        }
+
+        private class CallbackContainer
+        {
+            private readonly IResponse _response;
+            private readonly Delegate _delegate;
+
+            private CallbackContainer( Delegate @delegate, IResponse response )
+            {
+                _delegate = @delegate;
+                _response = response;
+            }
+
+            public bool IsMatch<T>( Action<T> callback )
+            {
+                return  _delegate == (Delegate)callback;
+            }
+
+            public void Invoke( byte[] payload )
+            {
+                _response.Load( payload );
+                _delegate.DynamicInvoke( _response );
+            }
+
+            public static CallbackContainer Create<T>( Action<T> callback ) where T : IResponse, new()
+            {
+                return new CallbackContainer( callback, new T() );
+            }
         }
     }
 }

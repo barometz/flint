@@ -83,9 +83,9 @@ namespace flint_test
             pebble.MessageReceived += pebble_MessageReceived;
             // Subscribe to specific events
             pebble.LogReceived += pebble_LogReceived;
-            pebble.MediaControlReceived += pebble_MediaControlReceived;
+            pebble.RegisterCallback<MusicControlResponse>( pebble_MediaControlReceived );
             // Subscribe to an event for a particular endpoint
-            pebble.RegisterEndpointCallback(Pebble.Endpoints.Ping, pingReceived);
+            pebble.RegisterCallback<PingResponse>(pingReceived);
 
             FirmwareResponse firmwareResponse = pebble.GetFirmwareVersionAsync().Result;
             if (firmwareResponse.Success)
@@ -107,13 +107,13 @@ namespace flint_test
             var applist = (await pebble.GetAppbankContentsAsync()).AppBank.Apps;
             Console.WriteLine("Choose an app to remove");
             AppBank.App result = SharpMenu<AppBank.App>.WriteAndPrompt(applist);
-            AppbankInstallMessageEventArgs ev = await pebble.RemoveAppAsync(result);
+            AppbankInstallResponse ev = await pebble.RemoveAppAsync(result);
             Console.WriteLine(ev.MsgType);
         }
 
-        static void pebble_MediaControlReceived(object sender, MediaControlReceivedEventArgs e)
+        static void pebble_MediaControlReceived(MusicControlResponse response)
         {
-            Console.WriteLine("Received " + e.Command.ToString());
+            Console.WriteLine("Received " + response.Command.ToString());
         }
 
         static void pebble_MessageReceived(object sender, MessageReceivedEventArgs e)
@@ -126,7 +126,7 @@ namespace flint_test
             Console.WriteLine(e);
         }
 
-        static void pingReceived(object sender, MessageReceivedEventArgs e)
+        static void pingReceived(PingResponse pingResponse)
         {
             Console.WriteLine("Received a ping through generic endpoint handler");
         }

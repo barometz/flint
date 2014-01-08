@@ -4,7 +4,8 @@
         xmlns:viewModels="clr-namespace:Windows.Pebble.ViewModels" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:flint="clr-namespace:flint;assembly=flint" mc:Ignorable="d"
+        xmlns:views="clr-namespace:Windows.Pebble.Views"
+        mc:Ignorable="d"
         Title="Pebble" Height="350" Width="525">
     <Window.DataContext>
         <viewModels:MainWindowViewModel />
@@ -50,92 +51,17 @@
                     </Style.Triggers>
                 </Style>
             </TabControl.Style>
-            <TabItem Header="Info" DataContext="{Binding PebbleInfo}" IsSelected="{Binding IsSelected}">
-                <Grid Margin="10">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition />
-                    </Grid.RowDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="{Binding PebbleTime, StringFormat='Pebble Time: {0:G}'}" />
-                        <TextBlock Text="{Binding CurrentTime, StringFormat='System Time: {0:G}'}" />
-                    </StackPanel>
-                    <Grid Grid.Row="1" Margin="0,5,0,0">
-                        <Grid.Resources>
-                            <DataTemplate x:Key="FirmwareTemplate" DataType="flint:FirmwareVersion">
-                                <TextBlock>
-                                    <Run Text="{Binding Version, StringFormat='Version: {0}', Mode=OneWay}"/>
-                                    <LineBreak/>
-                                    <Run Text="{Binding Commit, StringFormat='Commit: {0}', Mode=OneWay}"/>
-                                    <Run Text="{Binding Timestamp, StringFormat='({0:d})', Mode=OneWay}"/>
-                                    <LineBreak/>
-                                    <Run Text="{Binding HardwarePlatform, StringFormat='Hardware Platform: {0}', Mode=OneWay}"/>
-                                    <LineBreak/>
-                                    <Run Text="{Binding MetadataVersion, StringFormat='Metadata Version: {0}', Mode=OneWay}"/>
-                                </TextBlock>
-                            </DataTemplate>
-                        </Grid.Resources>
-                        
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-
-                        <GroupBox Header="Firmware">
-                            <ContentPresenter Content="{Binding Firmware}" ContentTemplate="{StaticResource FirmwareTemplate}" Margin="10"/>
-                        </GroupBox>
-                        <GroupBox Header="Recovery Firmware" Grid.Column="1">
-                            <ContentPresenter Content="{Binding RecoveryFirmware}" ContentTemplate="{StaticResource FirmwareTemplate}" Margin="10"/>
-                        </GroupBox>
-                    </Grid>
-                </Grid>
+            <TabItem Header="Info" >
+                <views:PebbleInfoView />
             </TabItem>
-            <TabItem Header="Apps" DataContext="{Binding PebbleApps}" IsSelected="{Binding IsSelected}">
-                <GroupBox Header="Installed Apps" Grid.Row="1" Margin="0,5">
-                    <Grid Margin="10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition />
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <ListBox ItemsSource="{Binding Apps}" IsSynchronizedWithCurrentItem="True">
-                            <ListBox.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="_Remove App" Command="{Binding RemoveAppCommand}" CommandParameter="{Binding Apps/}"/>
-                                </ContextMenu>
-                            </ListBox.ContextMenu>
-                            <ListBox.Style>
-                                <Style TargetType="ListBox">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Apps.IsEmpty}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ListBox.Style>
-                        </ListBox>
-                        <TextBlock Text="No Apps Installed">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Apps.IsEmpty}" Value="False">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <Grid Grid.Row="1" Margin="0,10,0,0">
-                            <Button Content="Install App" Command="{Binding InstallAppCommand}" Grid.Column="1" HorizontalAlignment="Left" Padding="10,2"/>
-                        </Grid>
-                    </Grid>
-                </GroupBox>
+            <TabItem Header="Apps">
+                <views:PebbleAppsView />
             </TabItem>
-            <TabItem Header="Test" DataContext="{Binding PebbleTest}">
-                <Grid Margin="10">
-                    <StackPanel>
-                        <Button Content="Send Ping" Command="{Binding PingCommand}" Padding="10,1" HorizontalAlignment="Left"/>
-                    </StackPanel>
-                </Grid>
+            <TabItem Header="Media">
+                <views:PebbleMediaView />
+            </TabItem>
+            <TabItem Header="Test">
+                <views:PebbleTestView />
             </TabItem>
         </TabControl>
     </Grid>

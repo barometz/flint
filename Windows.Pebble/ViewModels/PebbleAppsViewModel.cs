@@ -5,24 +5,27 @@ using System.Windows.Input;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
 using Microsoft.Win32;
+using Windows.Pebble.Messages;
 using flint;
 
 namespace Windows.Pebble.ViewModels
 {
     public class PebbleAppsViewModel : ViewModelBase
     {
-        private readonly flint.Pebble _pebble;
         private readonly BindingList<AppBank.App> _apps = new BindingList<AppBank.App>();
 
         private readonly RelayCommand<AppBank.App> _removeAppCommand;
         private readonly RelayCommand _installAppCommand;
 
-        public PebbleAppsViewModel( flint.Pebble pebble )
-        {
-            _pebble = pebble;
+        private flint.Pebble _pebble;
 
+        public PebbleAppsViewModel()
+        {
             _removeAppCommand = new RelayCommand<AppBank.App>( OnRemoveApp );
             _installAppCommand = new RelayCommand( OnInstallApp );
+
+            MessengerInstance.Register<PebbleConnected>( this, OnPebbleConnected );
+            MessengerInstance.Register<PebbleDisconnected>( this, OnPebbleDisconnected );
         }
 
         public ICollectionView Apps
@@ -40,20 +43,6 @@ namespace Windows.Pebble.ViewModels
             get { return _installAppCommand; }
         }
 
-
-        private bool _IsSelected;
-        public bool IsSelected
-        {
-            get { return _IsSelected; }
-            set
-            {
-                if ( Set( () => IsSelected, ref _IsSelected, value ) )
-                {
-                    LoadValuesAsync();
-                }
-            }
-        }
-
         private bool _Loading;
         public bool Loading
         {
@@ -61,25 +50,24 @@ namespace Windows.Pebble.ViewModels
             set { Set( () => Loading, ref _Loading, value ); }
         }
 
-        public async Task OnConnectedAsync()
+        private async void OnPebbleConnected( PebbleConnected pebbleConnected )
         {
-            await LoadValuesAsync();
+            _pebble = pebbleConnected.Pebble;
+
+            await LoadAppsAsync();
         }
 
-        public async Task OnDisconnectedAsync()
+        private void OnPebbleDisconnected( PebbleDisconnected pebbleDisconnected )
         {
-            await LoadValuesAsync();
-        }
-
-        private async Task LoadValuesAsync()
-        {
-            if (IsSelected && _pebble.Alive)
-                await LoadAppsAsync();
+            if ( pebbleDisconnected.Pebble == _pebble )
+            {
+                _pebble = null;
+            }
         }
 
         private async Task LoadAppsAsync()
         {
-            if ( _pebble.Alive == false )
+            if ( _pebble == null || _pebble.Alive == false )
                 return;
 
             Loading = true;

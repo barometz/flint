@@ -1,20 +1,23 @@
 ﻿using System.Windows.Input;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
+using Windows.Pebble.Messages;
 using flint.Responses;
 
 namespace Windows.Pebble.ViewModels
 {
     public class PebbleTestViewModel : ViewModelBase
     {
-        private readonly flint.Pebble _pebble;
         private readonly RelayCommand _pingCommand;
 
-        public PebbleTestViewModel( flint.Pebble pebble )
-        {
-            _pebble = pebble;
+        private flint.Pebble _pebble;
 
+        public PebbleTestViewModel()
+        {
             _pingCommand = new RelayCommand(OnPing);
+
+            MessengerInstance.Register<PebbleConnected>( this, OnPebbleConnected );
+            MessengerInstance.Register<PebbleDisconnected>( this, OnPebbleDisconnected );
         }
 
         public ICommand PingCommand
@@ -29,9 +32,23 @@ namespace Windows.Pebble.ViewModels
             set { Set(() => PingResponse, ref _PingResponse, value); }
         }
 
+        private void OnPebbleConnected( PebbleConnected pebbleConnected )
+        {
+            _pebble = pebbleConnected.Pebble;
+
+        }
+
+        private void OnPebbleDisconnected( PebbleDisconnected pebbleDisconnected )
+        {
+            if ( pebbleDisconnected.Pebble == _pebble )
+            {
+                _pebble = null;
+            }
+        }
+
         private async void OnPing()
         {
-            if (_pebble.Alive == false)
+            if (_pebble == null || _pebble.Alive == false)
                 return;
 
             PingResponse pingResponse = await _pebble.PingAsync();

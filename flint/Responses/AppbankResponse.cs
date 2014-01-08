@@ -1,6 +1,6 @@
 ﻿namespace flint.Responses
 {
-    public class AppbankRetrievedResponse : ResponseBase
+    public class AppbankResponse : ResponseBase
     {
         public AppBank AppBank { get; private set; }
 

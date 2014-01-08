@@ -65,7 +65,22 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Messages\PebbleDisconnected.cs" />
+    <Compile Include="Messages\PebbleConnected.cs" />
+    <Compile Include="Util\NativeMethods.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
+    <Compile Include="Views\PebbleAppsView.xaml.cs">
+      <DependentUpon>PebbleAppsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PebbleInfoView.xaml.cs">
+      <DependentUpon>PebbleInfoView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PebbleMediaView.xaml.cs">
+      <DependentUpon>PebbleMediaView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PebbleTestView.xaml.cs">
+      <DependentUpon>PebbleTestView.xaml</DependentUpon>
+    </Compile>
     <Page Include="Views\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -76,12 +91,29 @@
     </Compile>
     <Compile Include="ViewModels\PebbleAppsViewModel.cs" />
     <Compile Include="ViewModels\PebbleInfoViewModel.cs" />
+    <Compile Include="ViewModels\PebbleMediaViewModel.cs" />
     <Compile Include="ViewModels\PebbleTestViewModel.cs" />
     <Compile Include="ViewModels\PebbleViewModel.cs" />
     <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Views\PebbleAppsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PebbleInfoView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PebbleMediaView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PebbleTestView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
