@@ -27,12 +27,12 @@ namespace Windows.Pebble.ViewModels
             get { return CollectionViewSource.GetDefaultView(_commandsReceived); }
         }
 
-        private void OnPebbleConnected( PebbleConnected pebbleConnected )
+        private async void OnPebbleConnected( PebbleConnected pebbleConnected )
         {
             _pebble = pebbleConnected.Pebble;
 
             _pebble.RegisterCallback<MusicControlResponse>( OnMusicControlReceived );
-            //_pebble.SetNowPlaying( "Kevin", "Album", "Track 1" );
+            var response  = await _pebble.SetNowPlaying( "Kevin", "Album", "Track 1" );
         }
 
         private void OnPebbleDisconnected( PebbleDisconnected pebbleDisconnected )

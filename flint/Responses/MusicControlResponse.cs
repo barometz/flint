@@ -1,4 +1,5 @@
-﻿namespace flint.Responses
+﻿
+namespace flint.Responses
 {
     public class MusicControlResponse : ResponseBase
     {

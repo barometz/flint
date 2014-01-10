@@ -54,7 +54,7 @@ namespace Windows.Pebble.ViewModels
 
             if ( _pebble != null && _pebble.Alive )
             {
-                _timer.Start();
+                //_timer.Start();
                 await LoadFirmwareAsync();
             }
         }

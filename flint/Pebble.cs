@@ -21,56 +21,9 @@ namespace flint
     {
         // TODO: Exception handling.
 
-        /// <summary> Endpoints (~"commands") used by Pebble to indicate particular instructions 
-        /// or instruction types.
-        /// </summary>
-        public enum Endpoints : ushort
-        {
-            Firmware = 1,
-            Time = 11,
-            FirmwareVersion = 16,
-            PhoneVersion = 17,
-            SystemMessage = 18,
-            MusicControl = 32,
-            PhoneControl = 33,
-            Logs = 2000,
-            Ping = 2001,
-            Draw = 2002,
-            Reset = 2003,
-            Appmfg = 2004,
-            Notification = 3000,
-            SysReg = 5000,
-            FctReg = 5001,
-            AppManager = 6000,
-            RunKeeper = 7000,
-            PutBytes = 48879,
-            MaxEndpoint = 65535 //ushort.MaxValue
-        }
-
         public enum SessionCaps : uint
         {
             GAMMA_RAY = 0x80000000
-        }
-
-        [Flags]
-        public enum RemoteCaps : uint
-        {
-            Unknown = 0,
-            IOS = 1,
-            Android = 2,
-            OSX = 3,
-            Linux = 4,
-            Windows = 5,
-            Telephony = 16,
-            SMS = 32,
-            GPS = 64,
-            BTLE = 128,
-            // 240? No, that doesn't make sense.  But it's apparently true.
-            CameraFront = 240,
-            CameraRear = 256,
-            Accelerometer = 512,
-            Gyro = 1024,
-            Compass = 2048
         }
 
         private enum TransferType : byte
@@ -337,7 +290,7 @@ namespace flint
         /// <param name="track"></param>
         /// <param name="album"></param>
         /// <param name="artist"></param>
-        public void SetNowPlaying( string artist, string album, string track )
+        public async Task<MusicControlResponse> SetNowPlaying( string artist, string album, string track )
         {
             // No idea what this does.  Do it anyway.
             byte[] data = { 16 };
@@ -353,7 +306,7 @@ namespace flint
             data = data.Concat( albumlen ).Concat( _album ).ToArray();
             data = data.Concat( tracklen ).Concat( _track ).ToArray();
 
-            SendMessageAsync( Endpoints.MusicControl, data );
+            return await SendMessageAsync<MusicControlResponse>( Endpoints.MusicControl, data );
         }
 
         /// <summary> Set the time on the Pebble. Mostly convenient for syncing. </summary>
@@ -584,6 +537,7 @@ namespace flint
 
         private void pebbleProtocolRawMessageReceived( object sender, RawMessageReceivedEventArgs e )
         {
+            Debug.WriteLine("Received Message for Endpoint: {0}", (Endpoints)e.Endpoint);
             Type responseType;
             if (_endpointToResponseMap.TryGetValue((Endpoints) e.Endpoint, out responseType))
             {
