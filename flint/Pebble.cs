@@ -42,11 +42,6 @@ namespace flint
         /// <summary> Received a LOGS message from the Pebble. </summary>
         public event EventHandler<LogReceivedEventArgs> LogReceived = delegate { };
 
-        /// <summary> Holds callbacks for the separate endpoints.  
-        /// Saves a lot of typing. There's probably a good reason not to do this.
-        /// </summary>
-        private readonly Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>> endpointEvents;
-
         private readonly Dictionary<Type, List<CallbackContainer>> _callbackHandlers;
         private static readonly Dictionary<Endpoints, Type> _endpointToResponseMap;
 
@@ -77,8 +72,8 @@ namespace flint
             _endpointToResponseMap.Add( Endpoints.FirmwareVersion, typeof( FirmwareResponse ) );
             _endpointToResponseMap.Add( Endpoints.Ping, typeof( PingResponse ) );
             _endpointToResponseMap.Add( Endpoints.Time, typeof( TimeResponse ) );
-            _endpointToResponseMap.Add( Endpoints.MusicControl, typeof( MusicControlResponse) );
-
+            _endpointToResponseMap.Add( Endpoints.MusicControl, typeof( MusicControlResponse ) );
+            _endpointToResponseMap.Add( Endpoints.PhoneVersion, typeof( PhoneVersionResponse ) );
         }
 
         /// <summary> Create a new Pebble 
@@ -95,9 +90,11 @@ namespace flint
             _callbackHandlers = new Dictionary<Type, List<CallbackContainer>>();
 
             _PebbleProt = new PebbleProtocol( port );
-            _PebbleProt.RawMessageReceived += pebbleProtocolRawMessageReceived;
+            _PebbleProt.RawMessageReceived += RawMessageReceived;
 
-            endpointEvents = new Dictionary<Endpoints, EventHandler<MessageReceivedEventArgs>>();
+            //This is received immediately after connecting
+            RegisterCallback<PhoneVersionResponse>(PhoneVersionReceived);
+            //TODO: when are these called?
             //RegisterEndpointCallback( Endpoints.PhoneVersion, PhoneVersionReceived );
             //RegisterEndpointCallback( Endpoints.Version, VersionReceived );
             //RegisterEndpointCallback( Endpoints.AppManager, AppbankStatusResponseReceived );
@@ -109,7 +106,7 @@ namespace flint
         /// </summary>
         /// <param name="pebbleId"></param>
         /// <returns></returns>
-        /// <exception cref="pebble.PebbleNotFoundException">When no Pebble or no Pebble of the 
+        /// <exception cref="PebbleNotFoundException">When no Pebble or no Pebble of the 
         /// specified id was found.</exception>
         public static Pebble GetPebble( string pebbleId = null )
         {
@@ -143,22 +140,22 @@ namespace flint
             var client = new BluetoothClient();
 
             // A list of all BT devices that are paired, in range, and named "Pebble *" 
-            var btlist = client.DiscoverDevices( 20, true, false, false ).
+            var bluetoothDevices = client.DiscoverDevices( 20, true, false, false ).
                 Where( bdi => bdi.DeviceName.StartsWith( "Pebble " ) );
 
             // A list of all available serial ports with some metadata including the PnP device ID,
             // which in turn contains a BT device address we can search for.
-            var _portlist = ( new ManagementObjectSearcher( "SELECT * FROM Win32_SerialPort" ) ).Get();
-            var portlist = new ManagementObject[_portlist.Count];
-            _portlist.CopyTo( portlist, 0 );
+            var portListCollection = ( new ManagementObjectSearcher( "SELECT * FROM Win32_SerialPort" ) ).Get();
+            var portList = new ManagementBaseObject[portListCollection.Count];
+            portListCollection.CopyTo( portList, 0 );
 
             // Match bluetooth devices and serial ports, then create Pebbles out of them.
             // Seems like a LINQ join should do this much more cleanly. 
 
-            return ( from bdi in btlist
-                     from port in portlist
-                     where ( (string)port["PNPDeviceID"] ).Contains( bdi.DeviceAddress.ToString() )
-                     select new Pebble( port["DeviceID"] as string, bdi.DeviceName.Substring( 7 ) ) ).ToList();
+            return ( from device in bluetoothDevices
+                     from port in portList
+                     where ( (string)port["PNPDeviceID"] ).Contains( device.DeviceAddress.ToString() )
+                     select new Pebble( port["DeviceID"] as string, device.DeviceName.Substring( 7 ) ) ).ToList();
         }
 
         /// <summary> Set the capabilities you want to tell the Pebble about.  
@@ -214,7 +211,7 @@ namespace flint
             if ( _callbackHandlers.TryGetValue( typeof( T ), out callbacks ) == false )
                 _callbackHandlers[typeof( T )] = callbacks = new List<CallbackContainer>();
 
-            callbacks.Add( CallbackContainer.Create(callback) );
+            callbacks.Add( CallbackContainer.Create( callback ) );
         }
 
         public bool UnregisterCallback<T>( Action<T> callback ) where T : IResponse
@@ -222,7 +219,7 @@ namespace flint
             if ( callback == null ) throw new ArgumentNullException( "callback" );
             List<CallbackContainer> callbacks;
             if ( _callbackHandlers.TryGetValue( typeof( T ), out callbacks ) )
-                return callbacks.Remove( callbacks.FirstOrDefault(x => x.IsMatch(callback)) );
+                return callbacks.Remove( callbacks.FirstOrDefault( x => x.IsMatch( callback ) ) );
             return false;
         }
 
@@ -230,8 +227,6 @@ namespace flint
 
         /// <summary> Send the Pebble a ping. </summary>
         /// <param name="pingData"></param>
-        /// <param name="async">If true, return null immediately and let the caller wait for a PING event.  If false, 
-        /// wait for the reply and return the PingReceivedEventArgs.</param>
         public async Task<PingResponse> PingAsync( uint pingData = 0 )
         {
             // No need to worry about endianness as it's sent back byte for byte anyway.
@@ -488,7 +483,7 @@ namespace flint
                                                 return result;
                                         }
                                     }
-                                    catch ( TimeoutException e )
+                                    catch ( TimeoutException )
                                     {
                                         Disconnect();
                                     }
@@ -535,18 +530,18 @@ namespace flint
 
         #region Pebble message event handlers
 
-        private void pebbleProtocolRawMessageReceived( object sender, RawMessageReceivedEventArgs e )
+        private void RawMessageReceived( object sender, RawMessageReceivedEventArgs e )
         {
-            Debug.WriteLine("Received Message for Endpoint: {0}", (Endpoints)e.Endpoint);
+            Debug.WriteLine( "Received Message for Endpoint: {0}", (Endpoints)e.Endpoint );
             Type responseType;
-            if (_endpointToResponseMap.TryGetValue((Endpoints) e.Endpoint, out responseType))
+            if ( _endpointToResponseMap.TryGetValue( (Endpoints)e.Endpoint, out responseType ) )
             {
                 //Check for callbacks
                 List<CallbackContainer> callbacks;
-                if (_callbackHandlers.TryGetValue(responseType, out callbacks))
+                if ( _callbackHandlers.TryGetValue( responseType, out callbacks ) )
                 {
-                    foreach (var callback in callbacks)
-                        callback.Invoke(e.Payload);
+                    foreach ( var callback in callbacks )
+                        callback.Invoke( e.Payload );
                 }
             }
 
@@ -567,16 +562,22 @@ namespace flint
 
             // Catchall:
             MessageReceived( this, new MessageReceivedEventArgs( endpoint, e.Payload ) );
+        }
 
-            // Endpoint-specific
-            if ( endpointEvents.ContainsKey( endpoint ) )
+        private void PhoneVersionReceived( PhoneVersionResponse response )
+        {
+            byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
+            byte[] session = BitConverter.GetBytes( _SessionCaps );
+            byte[] remote = BitConverter.GetBytes( _RemoteCaps );
+            if ( BitConverter.IsLittleEndian )
             {
-                EventHandler<MessageReceivedEventArgs> h = endpointEvents[endpoint];
-                if ( h != null )
-                {
-                    h( this, new MessageReceivedEventArgs( endpoint, e.Payload ) );
-                }
+                Array.Reverse( session );
+                Array.Reverse( remote );
             }
+
+            var msg = new byte[0];
+            msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
+            SendMessageAsync( Endpoints.PhoneVersion, msg );
         }
 
         private void PhoneVersionReceived( object sender, MessageReceivedEventArgs e )
@@ -590,7 +591,7 @@ namespace flint
                 Array.Reverse( remote );
             }
 
-            byte[] msg = new byte[0];
+            var msg = new byte[0];
             msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
             SendMessageAsync( Endpoints.PhoneVersion, msg );
         }
@@ -610,12 +611,12 @@ namespace flint
              * 45:   HW Platform (byte)
              * 46:   Metadata version (byte)
              */
-            byte[] _ts = data.Take( 4 ).ToArray();
+            byte[] ts = data.Take( 4 ).ToArray();
             if ( BitConverter.IsLittleEndian )
             {
-                Array.Reverse( _ts );
+                Array.Reverse( ts );
             }
-            DateTime timestamp = Util.TimestampToDateTime( BitConverter.ToInt32( _ts, 0 ) );
+            DateTime timestamp = Util.TimestampToDateTime( BitConverter.ToInt32( ts, 0 ) );
             string version = Encoding.UTF8.GetString( data.Skip( 4 ).Take( 32 ).ToArray() );
             string commit = Encoding.UTF8.GetString( data.Skip( 36 ).Take( 8 ).ToArray() );
             version = version.Substring( 0, version.IndexOf( '\0' ) );
@@ -722,7 +723,7 @@ namespace flint
 
             public bool IsMatch<T>( Action<T> callback )
             {
-                return  _delegate == (Delegate)callback;
+                return _delegate == (Delegate)callback;
             }
 
             public void Invoke( byte[] payload )

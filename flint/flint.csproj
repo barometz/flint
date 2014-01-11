@@ -68,6 +68,7 @@
     <Compile Include="Responses\AppbankResponse.cs" />
     <Compile Include="Responses\FirmwareResponse.cs" />
     <Compile Include="Responses\MusicControlResponse.cs" />
+    <Compile Include="Responses\PhoneVersionResponse.cs" />
     <Compile Include="Responses\ResponseBase.cs" />
     <Compile Include="Crc32.cs" />
     <Compile Include="FirmwareVersion.cs" />

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Windows;
-using System.Windows.Interop;
 
 namespace Windows.Pebble.Util
 {
@@ -17,11 +15,9 @@ namespace Windows.Pebble.Util
         
         static NativeMethods()
         {
-            if (Application.Current == null)
-                throw new Exception("There is no current application");
-            if (Application.Current.MainWindow == null)
-                throw new Exception("The current application does not have its main window set");
-            _windowHandle = new WindowInteropHelper(Application.Current.MainWindow).Handle;
+            _windowHandle = App.MainWindowHandle;
+            if (_windowHandle == IntPtr.Zero)
+                throw new Exception("MainWindowHandle not set");
         }
 
         public static void SendMessage( AppCommandCode command )
