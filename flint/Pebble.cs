@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -93,7 +94,7 @@ namespace flint
             _PebbleProt.RawMessageReceived += RawMessageReceived;
 
             //This is received immediately after connecting
-            RegisterCallback<PhoneVersionResponse>(PhoneVersionReceived);
+            RegisterCallback<PhoneVersionResponse>( PhoneVersionReceived );
             //TODO: when are these called?
             //RegisterEndpointCallback( Endpoints.PhoneVersion, PhoneVersionReceived );
             //RegisterEndpointCallback( Endpoints.Version, VersionReceived );
@@ -242,8 +243,11 @@ namespace flint
         /// <param name="parts">Message parts will be clipped to 255 bytes.</param>
         public void Notification( byte type, params string[] parts )
         {
-            string[] ts = { ( new DateTime( 1970, 1, 1 ) - DateTime.Now ).TotalSeconds.ToString() };
-            parts = parts.Take( 2 ).Concat( ts ).Concat( parts.Skip( 2 ) ).ToArray();
+            //Epoch is Jan 1 1970 00:00:00 UTC
+            string timeStamp = ( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ) - DateTime.UtcNow ).TotalSeconds.ToString( CultureInfo.InvariantCulture );
+
+            parts = parts.Take( 2 ).Concat( new[] { timeStamp } ).Concat( parts.Skip( 2 ) ).ToArray();
+
             byte[] data = { type };
             foreach ( string part in parts )
             {

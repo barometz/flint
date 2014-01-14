@@ -69,6 +69,8 @@
     <Compile Include="Messages\PebbleConnected.cs" />
     <Compile Include="Util\NativeMethods.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
+    <Compile Include="ViewModels\PebbleNotificationViewModel.cs" />
+    <Compile Include="ViewModels\PebbleViewModelBase.cs" />
     <Compile Include="Views\PebbleAppsView.xaml.cs">
       <DependentUpon>PebbleAppsView.xaml</DependentUpon>
     </Compile>
