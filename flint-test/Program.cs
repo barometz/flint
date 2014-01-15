@@ -69,8 +69,8 @@ namespace flint_test
 
             menu = new SharpMenu<Action>();
             menu.Add(() => pebble.PingAsync(235).Wait(), "Send the Pebble a ping");
-            menu.Add(() => pebble.NotificationSMS("+3278051200", "It's time."), "Send an SMS notification");
-            menu.Add(() => pebble.NotificationMail("Your pal", "URGENT NOTICE", "There is a thing you need to do. Urgently."),
+            menu.Add(() => pebble.NotificationSMSAsync("+3278051200", "It's time.").Wait(), "Send an SMS notification");
+            menu.Add(() => pebble.NotificationMailAsync("Your pal", "URGENT NOTICE", "There is a thing you need to do. Urgently.").Wait(),
                 "Send an email notification");
             menu.Add(() => pebble.SetNowPlaying("That dude", "That record", "That track"), "Send some metadata to the music app");
             menu.Add(() => pebble.BadPing(), "Send a bad ping to trigger a LOGS response");

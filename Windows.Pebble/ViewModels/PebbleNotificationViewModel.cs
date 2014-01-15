@@ -6,54 +6,64 @@ namespace Windows.Pebble.ViewModels
 {
     public class PebbleNotificationViewModel : PebbleViewModelBase
     {
-        private readonly RelayCommand _smsCommand;
-        private readonly RelayCommand _emailCommand;
+        private readonly RelayCommand<NotificationTypes> _sendNotificationCommand;
 
         public PebbleNotificationViewModel()
         {
-            _smsCommand = new RelayCommand(OnSMSCommand);
-            _emailCommand = new RelayCommand(OnEmailCommand);
+            _sendNotificationCommand = new RelayCommand<NotificationTypes>( OnSendNotification );
         }
 
-        public ICommand SMSCommand
+        public ICommand SendNotificationCommand
         {
-            get { return _smsCommand; }
-        }
-
-        public ICommand EMailCommand
-        {
-            get { return _emailCommand; }
+            get { return _sendNotificationCommand; }
         }
 
         private string _Sender;
         public string Sender
         {
             get { return _Sender; }
-            set { Set(() => Sender, ref _Sender, value); }
+            set { Set( () => Sender, ref _Sender, value ); }
         }
 
         private string _Subject;
         public string Subject
         {
             get { return _Subject; }
-            set { Set(() => Subject, ref _Subject, value); }
+            set { Set( () => Subject, ref _Subject, value ); }
         }
 
         private string _Body;
         public string Body
         {
             get { return _Body; }
-            set { Set(() => Body, ref _Body, value); }
+            set { Set( () => Body, ref _Body, value ); }
         }
 
-        private void OnEmailCommand()
+        private async void OnSendNotification( NotificationTypes notificationType )
         {
-
+            switch ( notificationType )
+            {
+                case NotificationTypes.Email:
+                    await _pebble.NotificationMailAsync( Sender, Subject, Body );
+                    break;
+                case NotificationTypes.SMS:
+                    await _pebble.NotificationSMSAsync( Sender, Body );
+                    break;
+                case NotificationTypes.Facebook:
+                    await _pebble.NotificationFacebookAsync( Sender, Body );
+                    break;
+                case NotificationTypes.Twitter:
+                    await _pebble.NotificationTwitterAsync( Sender, Body );
+                    break;
+            }
         }
+    }
 
-        private void OnSMSCommand()
-        {
-
-        }
+    public enum NotificationTypes
+    {
+        Email,
+        SMS,
+        Facebook,
+        Twitter
     }
 }

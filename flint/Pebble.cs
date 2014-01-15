@@ -241,7 +241,8 @@ namespace flint
         /// <summary> Generic notification support.  Shouldn't have to use this, but feel free. </summary>
         /// <param name="type">Notification type.  So far we've got 0 for mail, 1 for SMS.</param>
         /// <param name="parts">Message parts will be clipped to 255 bytes.</param>
-        public void Notification( byte type, params string[] parts )
+        //TODO: Make type an enum
+        public async Task NotificationAsync( byte type, params string[] parts )
         {
             //Epoch is Jan 1 1970 00:00:00 UTC
             string timeStamp = ( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ) - DateTime.UtcNow ).TotalSeconds.ToString( CultureInfo.InvariantCulture );
@@ -259,7 +260,7 @@ namespace flint
                 byte[] len = { Convert.ToByte( partBytes.Length ) };
                 data = data.Concat( len ).Concat( partBytes ).ToArray();
             }
-            SendMessageAsync( Endpoints.Notification, data );
+            await SendMessageNoResponseAsync( Endpoints.Notification, data );
         }
 
         /// <summary>
@@ -268,9 +269,9 @@ namespace flint
         /// <param name="sender"></param>
         /// <param name="subject"></param>
         /// <param name="body"></param>
-        public void NotificationMail( string sender, string subject, string body )
+        public async Task NotificationMailAsync( string sender, string subject, string body )
         {
-            Notification( 0, sender, body, subject );
+            await NotificationAsync( 0, sender, body, subject );
         }
 
         /// <summary>
@@ -278,9 +279,19 @@ namespace flint
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="body"></param>
-        public void NotificationSMS( string sender, string body )
+        public async Task NotificationSMSAsync( string sender, string body )
         {
-            Notification( 1, sender, body );
+            await NotificationAsync( 1, sender, body );
+        }
+
+        public async Task NotificationFacebookAsync( string sender, string body )
+        {
+            await NotificationAsync( 2, sender, body );
+        }
+
+        public async Task NotificationTwitterAsync( string sender, string body )
+        {
+            await NotificationAsync( 3, sender, body );
         }
 
         /// <summary> Send "Now playing.." metadata to the Pebble.  
@@ -529,6 +540,17 @@ namespace flint
                     result.SetError( "Timed out waiting for a response" );
                 }
                 return result;
+            } );
+        }
+
+        private Task SendMessageNoResponseAsync( Endpoints endpoint, byte[] payload )
+        {
+            return Task.Run( () =>
+            {
+                lock ( _PebbleProt )
+                {
+                    _PebbleProt.SendMessage( (ushort)endpoint, payload );
+                }
             } );
         }
 

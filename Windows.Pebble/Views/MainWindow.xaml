@@ -60,6 +60,9 @@
             <TabItem Header="Media">
                 <views:PebbleMediaView />
             </TabItem>
+            <TabItem Header="Notification">
+                <views:PebbleNotificationView />
+            </TabItem>
             <TabItem Header="Test">
                 <views:PebbleTestView />
             </TabItem>

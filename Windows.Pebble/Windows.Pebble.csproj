@@ -80,6 +80,9 @@
     <Compile Include="Views\PebbleMediaView.xaml.cs">
       <DependentUpon>PebbleMediaView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\PebbleNotificationView.xaml.cs">
+      <DependentUpon>PebbleNotificationView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\PebbleTestView.xaml.cs">
       <DependentUpon>PebbleTestView.xaml</DependentUpon>
     </Compile>
@@ -109,6 +112,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\PebbleMediaView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PebbleNotificationView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
