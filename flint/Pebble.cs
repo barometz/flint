@@ -224,8 +224,6 @@ namespace flint
             return false;
         }
 
-        #region Messages to Pebble
-
         /// <summary> Send the Pebble a ping. </summary>
         /// <param name="pingData"></param>
         public async Task<PingResponse> PingAsync( uint pingData = 0 )
@@ -250,16 +248,7 @@ namespace flint
             parts = parts.Take( 2 ).Concat( new[] { timeStamp } ).Concat( parts.Skip( 2 ) ).ToArray();
 
             byte[] data = { type };
-            foreach ( string part in parts )
-            {
-                byte[] partBytes = Encoding.UTF8.GetBytes( part );
-                if ( partBytes.Length > 255 )
-                {
-                    partBytes = partBytes.Take( 255 ).ToArray();
-                }
-                byte[] len = { Convert.ToByte( partBytes.Length ) };
-                data = data.Concat( len ).Concat( partBytes ).ToArray();
-            }
+            data = parts.Aggregate( data, ( current, part ) => current.Concat( GetBytes( part ) ).ToArray() );
             await SendMessageNoResponseAsync( Endpoints.Notification, data );
         }
 
@@ -300,23 +289,18 @@ namespace flint
         /// <param name="track"></param>
         /// <param name="album"></param>
         /// <param name="artist"></param>
-        public async Task<MusicControlResponse> SetNowPlaying( string artist, string album, string track )
+        public async Task SetNowPlayingAsync( string artist, string album, string track )
         {
             // No idea what this does.  Do it anyway.
             byte[] data = { 16 };
 
-            byte[] _artist = Encoding.UTF8.GetBytes( artist );
-            byte[] _album = Encoding.UTF8.GetBytes( album );
-            byte[] _track = Encoding.UTF8.GetBytes( track );
-            byte[] artistlen = { (byte)_artist.Length };
-            byte[] albumlen = { (byte)_album.Length };
-            byte[] tracklen = { (byte)_track.Length };
+            byte[] artistBytes = GetBytes( artist );
+            byte[] albumBytes = GetBytes( album );
+            byte[] trackBytes = GetBytes( track );
 
-            data = data.Concat( artistlen ).Concat( _artist ).ToArray();
-            data = data.Concat( albumlen ).Concat( _album ).ToArray();
-            data = data.Concat( tracklen ).Concat( _track ).ToArray();
+            data = data.Concat( artistBytes ).Concat( albumBytes ).Concat( trackBytes ).ToArray();
 
-            return await SendMessageAsync<MusicControlResponse>( Endpoints.MusicControl, data );
+            await SendMessageNoResponseAsync( Endpoints.MusicControl, data );
         }
 
         /// <summary> Set the time on the Pebble. Mostly convenient for syncing. </summary>
@@ -407,10 +391,6 @@ namespace flint
                 progress.Report( new ProgressValue( "Done", 100 ) );
         }
 
-        #endregion
-
-        #region Requests to send to Pebble
-
         public async Task<FirmwareResponse> GetFirmwareVersionAsync()
         {
             return await SendMessageAsync<FirmwareResponse>( Endpoints.FirmwareVersion, new byte[] { 0 } );
@@ -453,8 +433,6 @@ namespace flint
 
             return await SendMessageAsync<AppbankInstallResponse>( Endpoints.AppManager, msg );
         }
-
-        #endregion
 
         /// <summary> Send a message to the connected Pebble.  
         /// The payload should at most be 2048 bytes large.
@@ -554,8 +532,6 @@ namespace flint
             } );
         }
 
-        #region Pebble message event handlers
-
         private void RawMessageReceived( object sender, RawMessageReceivedEventArgs e )
         {
             Debug.WriteLine( "Received Message for Endpoint: {0}", (Endpoints)e.Endpoint );
@@ -606,26 +582,6 @@ namespace flint
             SendMessageAsync( Endpoints.PhoneVersion, msg );
         }
 
-        private void PhoneVersionReceived( object sender, MessageReceivedEventArgs e )
-        {
-            byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
-            byte[] session = BitConverter.GetBytes( _SessionCaps );
-            byte[] remote = BitConverter.GetBytes( _RemoteCaps );
-            if ( BitConverter.IsLittleEndian )
-            {
-                Array.Reverse( session );
-                Array.Reverse( remote );
-            }
-
-            var msg = new byte[0];
-            msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
-            SendMessageAsync( Endpoints.PhoneVersion, msg );
-        }
-
-        #endregion
-
-        #region Utility stuff
-
         private static FirmwareVersion ParseVersion( byte[] data )
         {
             /*
@@ -657,8 +613,6 @@ namespace flint
         {
             return string.Format( "Pebble {0} on {1}", PebbleID, Port );
         }
-
-        #endregion
 
         private async Task<AppbankInstallResponse> RemoveAppByUUID( byte[] uuid )
         {
@@ -718,6 +672,17 @@ namespace flint
                 memoryStream.Position = 0;
                 return memoryStream.ToArray();
             }
+        }
+
+        private byte[] GetBytes( string @string )
+        {
+            if ( @string == null ) throw new ArgumentNullException( "string" );
+            if ( @string.Length > byte.MaxValue )
+                @string = @string.Substring( 0, byte.MaxValue );
+            byte[] bytes = new byte[@string.Length + 1];
+            bytes[0] = (byte)@string.Length;
+            Encoding.UTF8.GetBytes( @string, 0, @string.Length, bytes, 1 );
+            return bytes;
         }
 
         private static byte[] OrderByteArray( IEnumerable<byte> bytes )
