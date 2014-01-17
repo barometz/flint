@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using InTheHand.Net.Sockets;
@@ -8,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
-using System.Text;
 using Ionic.Zip;
 using flint.Responses;
 
@@ -35,14 +33,7 @@ namespace flint
             Resources = 4,
             Binary = 5
         }
-
-        /// <summary> Received a full message (any message with complete endpoint and payload) 
-        /// from the Pebble.
-        /// </summary>
-        public event EventHandler<MessageReceivedEventArgs> MessageReceived = delegate { };
-        /// <summary> Received a LOGS message from the Pebble. </summary>
-        public event EventHandler<LogReceivedEventArgs> LogReceived = delegate { };
-
+        
         private readonly Dictionary<Type, List<CallbackContainer>> _callbackHandlers;
         private static readonly Dictionary<Endpoints, Type> _endpointToResponseMap;
 
@@ -229,9 +220,7 @@ namespace flint
         public async Task<PingResponse> PingAsync( uint pingData = 0 )
         {
             // No need to worry about endianness as it's sent back byte for byte anyway.
-            byte[] data = BitConverter.GetBytes( pingData );
-
-            data = ConcatByteArray( new byte[] { 0 }, data );
+            byte[] data = Util.ConcatByteArray( new byte[] { 0 }, BitConverter.GetBytes( pingData ) );
 
             return await SendMessageAsync<PingResponse>( Endpoints.Ping, data );
         }
@@ -242,13 +231,13 @@ namespace flint
         //TODO: Make type an enum
         public async Task NotificationAsync( byte type, params string[] parts )
         {
-            //Epoch is Jan 1 1970 00:00:00 UTC
-            string timeStamp = ( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ) - DateTime.UtcNow ).TotalSeconds.ToString( CultureInfo.InvariantCulture );
+            string timeStamp = Util.GetTimestampFromDateTime( DateTime.UtcNow ).ToString( CultureInfo.InvariantCulture );
 
+            //TODO: This needs to be refactored
             parts = parts.Take( 2 ).Concat( new[] { timeStamp } ).Concat( parts.Skip( 2 ) ).ToArray();
 
             byte[] data = { type };
-            data = parts.Aggregate( data, ( current, part ) => current.Concat( GetBytes( part ) ).ToArray() );
+            data = parts.Aggregate( data, ( current, part ) => current.Concat( Util.GetBytes( part ) ).ToArray() );
             await SendMessageNoResponseAsync( Endpoints.Notification, data );
         }
 
@@ -291,38 +280,29 @@ namespace flint
         /// <param name="artist"></param>
         public async Task SetNowPlayingAsync( string artist, string album, string track )
         {
-            // No idea what this does.  Do it anyway.
-            byte[] data = { 16 };
+            byte[] artistBytes = Util.GetBytes( artist );
+            byte[] albumBytes = Util.GetBytes( album );
+            byte[] trackBytes = Util.GetBytes( track );
 
-            byte[] artistBytes = GetBytes( artist );
-            byte[] albumBytes = GetBytes( album );
-            byte[] trackBytes = GetBytes( track );
-
-            data = data.Concat( artistBytes ).Concat( albumBytes ).Concat( trackBytes ).ToArray();
+            byte[] data = Util.ConcatByteArray( new byte[] { 16 }, artistBytes, albumBytes, trackBytes );
 
             await SendMessageNoResponseAsync( Endpoints.MusicControl, data );
         }
 
         /// <summary> Set the time on the Pebble. Mostly convenient for syncing. </summary>
-        /// <param name="dt">The desired DateTime.  Doesn't care about timezones.</param>
-        public void SetTime( DateTime dt )
+        /// <param name="dateTime">The desired DateTime.  Doesn't care about timezones.</param>
+        public void SetTime( DateTime dateTime )
         {
-            byte[] data = { 2 };
-            int timestamp = (int)( dt - new DateTime( 1970, 1, 1 ) ).TotalSeconds;
-            byte[] _timestamp = BitConverter.GetBytes( timestamp );
-            if ( BitConverter.IsLittleEndian )
-            {
-                Array.Reverse( _timestamp );
-            }
-            data = data.Concat( _timestamp ).ToArray();
+            byte[] timestamp = Util.GetBytes( Util.GetTimestampFromDateTime( dateTime ) );
+            byte[] data = Util.ConcatByteArray( new byte[] { 2 }, timestamp );
             SendMessageAsync( Endpoints.Time, data );
         }
 
         /// <summary> Send a malformed ping (to trigger a LOGS response) </summary>
-        public void BadPing()
+        public async Task<PingResponse> BadPingAsync()
         {
             byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
-            SendMessageAsync( Endpoints.Ping, cookie );
+            return await SendMessageAsync<PingResponse>( Endpoints.Ping, cookie );
         }
 
         public async Task InstallAppAsync( PebbleBundle bundle, IProgress<ProgressValue> progress = null )
@@ -364,7 +344,7 @@ namespace flint
             if ( appEntry == null )
                 throw new PebbleException( "Could find application file" );
 
-            byte[] appBinary = GetBytes( appEntry );
+            byte[] appBinary = Util.GetBytes( appEntry );
 
             if ( progress != null )
                 progress.Report( new ProgressValue( "Transferring app to Pebble", 50 ) );
@@ -378,7 +358,7 @@ namespace flint
                 if ( resourcesEntry == null )
                     throw new PebbleException( "Could not find resource file" );
 
-                byte[] resourcesBinary = GetBytes( resourcesEntry );
+                byte[] resourcesBinary = Util.GetBytes( resourcesEntry );
                 if ( progress != null )
                     progress.Report( new ProgressValue( "Transferring app resources to Pebble", 70 ) );
                 if ( await PutBytes( resourcesBinary, firstFreeIndex, TransferType.Resources ) == false )
@@ -427,98 +407,67 @@ namespace flint
         /// <returns></returns>
         public async Task<AppbankInstallResponse> RemoveAppAsync( AppBank.App app )
         {
-            var msg = ConcatByteArray( new byte[] { 2 },
-                OrderByteArray( BitConverter.GetBytes( app.ID ) ),
-                OrderByteArray( BitConverter.GetBytes( app.Index ) ) );
+            var msg = Util.ConcatByteArray( new byte[] { 2 },
+                Util.GetBytes( app.ID ),
+                Util.GetBytes( app.Index ) );
 
             return await SendMessageAsync<AppbankInstallResponse>( Endpoints.AppManager, msg );
         }
 
-        /// <summary> Send a message to the connected Pebble.  
-        /// The payload should at most be 2048 bytes large.
-        /// </summary>
-        /// <remarks>
-        /// Yes, the docs at developers.getpebble.com say 4 kB.  I've received some errors from the Pebble that indicated 2 kB
-        /// and that's what I'll assume for the time being.
-        /// </remarks>
-        /// <param name="endpoint"></param>
-        /// <param name="payload"></param>
-        /// <exception cref="ArgumentOutOfRangeException">Passed on when the payload is too large.</exception>
-        private Task<byte[]> SendMessageAsync( Endpoints endpoint, byte[] payload )
-        {
-            return Task.Run( () =>
-                                {
-                                    var resetEvent = new ManualResetEvent( false );
-                                    byte[] result = null;
-
-                                    EventHandler<RawMessageReceivedEventArgs> eventHandler = null;
-                                    eventHandler = ( sender, e ) =>
-                                                       {
-                                                           if ( e.Endpoint == (ushort)endpoint )
-                                                           {
-                                                               result = e.Payload;
-                                                               _PebbleProt.RawMessageReceived -= eventHandler;
-                                                               resetEvent.Set();
-                                                           }
-                                                           else if ( e.Endpoint == (ushort)Endpoints.Logs )
-                                                           {
-                                                               var args = new LogReceivedEventArgs( e.Payload );
-                                                               Debug.WriteLine( "Logs received " + args.ToString() );
-                                                           }
-                                                       };
-                                    try
-                                    {
-                                        lock ( _PebbleProt )
-                                        {
-                                            _PebbleProt.RawMessageReceived += eventHandler;
-                                            _PebbleProt.SendMessage( (ushort)endpoint, payload );
-                                            if ( resetEvent.WaitOne( TimeSpan.FromSeconds( ( 5 ) ) ) )
-                                                return result;
-                                        }
-                                    }
-                                    catch ( TimeoutException )
-                                    {
-                                        Disconnect();
-                                    }
-                                    return null;
-                                } );
-        }
-
-        private Task<T> SendMessageAsync<T>( Endpoints endpoint, byte[] payload )
-            where T : class, IResponse, new()
+        private Task<RawMessageReceivedEventArgs> SendMessageAsync( Endpoints endpoint, byte[] payload )
         {
             return Task.Run( () =>
             {
                 var resetEvent = new ManualResetEvent( false );
-                T result = new T();
+                RawMessageReceivedEventArgs result = null;
 
                 EventHandler<RawMessageReceivedEventArgs> eventHandler = null;
                 eventHandler = ( sender, e ) =>
                 {
-                    if ( e.Endpoint == (ushort)endpoint )
+                    if ( e.Endpoint == (ushort)endpoint ||
+                        e.Endpoint == (ushort)Endpoints.Logs )
                     {
-                        result.Load( e.Payload );
+                        result = e;
                         _PebbleProt.RawMessageReceived -= eventHandler;
                         resetEvent.Set();
                     }
-                    else if ( e.Endpoint == (ushort)Endpoints.Logs )
-                    {
-                        var errorLog = new LogReceivedEventArgs( e.Payload );
-                        Debug.WriteLine( "Logs received " + errorLog );
-                        result.SetError( errorLog.ToString() );
-                        resetEvent.Set();
-                    }
                 };
-                lock ( _PebbleProt )
+                try
                 {
-                    _PebbleProt.RawMessageReceived += eventHandler;
-                    _PebbleProt.SendMessage( (ushort)endpoint, payload );
-                    if ( resetEvent.WaitOne( TimeSpan.FromSeconds( ( 5 ) ) ) )
-                        return result;
-                    result.SetError( "Timed out waiting for a response" );
+                    lock ( _PebbleProt )
+                    {
+                        _PebbleProt.RawMessageReceived += eventHandler;
+                        _PebbleProt.SendMessage( (ushort)endpoint, payload );
+                        if ( resetEvent.WaitOne( TimeSpan.FromSeconds( ( 5 ) ) ) )
+                            return result;
+                        _PebbleProt.RawMessageReceived -= eventHandler;
+                    }
                 }
-                return result;
+                catch ( TimeoutException )
+                {
+                    Disconnect();
+                }
+                return null;
             } );
+        }
+
+        private async Task<T> SendMessageAsync<T>( Endpoints endpoint, byte[] payload )
+            where T : class, IResponse, new()
+        {
+            RawMessageReceivedEventArgs args = await SendMessageAsync( endpoint, payload );
+            var result = new T();
+            if ( args != null )
+            {
+                if ( args.Endpoint == (ushort)endpoint )
+                    result.Load( args.Payload );
+                else if ( args.Endpoint == (ushort)Endpoints.Logs )
+                    result.SetError( args.Payload );
+            }
+            else
+            {
+                result.SetError( "Timed out waiting for a response" );
+            }
+            return result;
         }
 
         private Task SendMessageNoResponseAsync( Endpoints endpoint, byte[] payload )
@@ -546,24 +495,6 @@ namespace flint
                         callback.Invoke( e.Payload );
                 }
             }
-
-            Endpoints endpoint = (Endpoints)e.Endpoint;
-            // Switch for the specific events
-            switch ( endpoint )
-            {
-                case Endpoints.Logs:
-                    LogReceived( this, new LogReceivedEventArgs( e.Payload ) );
-                    break;
-                //case Endpoints.Ping:
-                //    PingReceived( this, new PingReceivedEventArgs( e.Payload ) );
-                //    break;
-                //case Endpoints.MusicControl:
-                //    MediaControlReceived( this, new MediaControlReceivedEventArgs( e.Payload ) );
-                //    break;
-            }
-
-            // Catchall:
-            MessageReceived( this, new MessageReceivedEventArgs( endpoint, e.Payload ) );
         }
 
         private void PhoneVersionReceived( PhoneVersionResponse response )
@@ -582,33 +513,6 @@ namespace flint
             SendMessageAsync( Endpoints.PhoneVersion, msg );
         }
 
-        private static FirmwareVersion ParseVersion( byte[] data )
-        {
-            /*
-             * The layout of the version info is:
-             *  0: 3 Timestamp (int32)
-             *  4:35 Version (string, padded with \0)
-             * 36:43 Commit (hash?) (string, padded with \0)
-             * 44:   Is recovery? (Boolean)
-             * 45:   HW Platform (byte)
-             * 46:   Metadata version (byte)
-             */
-            byte[] ts = data.Take( 4 ).ToArray();
-            if ( BitConverter.IsLittleEndian )
-            {
-                Array.Reverse( ts );
-            }
-            DateTime timestamp = Util.TimestampToDateTime( BitConverter.ToInt32( ts, 0 ) );
-            string version = Encoding.UTF8.GetString( data.Skip( 4 ).Take( 32 ).ToArray() );
-            string commit = Encoding.UTF8.GetString( data.Skip( 36 ).Take( 8 ).ToArray() );
-            version = version.Substring( 0, version.IndexOf( '\0' ) );
-            commit = commit.Substring( 0, commit.IndexOf( '\0' ) );
-            Boolean isRecovery = BitConverter.ToBoolean( data, 44 );
-            byte hardwarePlatform = data[45];
-            byte metadataVersion = data[46];
-            return new FirmwareVersion( timestamp, version, commit, isRecovery, hardwarePlatform, metadataVersion );
-        }
-
         public override string ToString()
         {
             return string.Format( "Pebble {0} on {1}", PebbleID, Port );
@@ -616,19 +520,21 @@ namespace flint
 
         private async Task<AppbankInstallResponse> RemoveAppByUUID( byte[] uuid )
         {
-            byte[] data = ConcatByteArray( new byte[] { 2 }, uuid );
+            byte[] data = Util.ConcatByteArray( new byte[] { 2 }, uuid );
             return await SendMessageAsync<AppbankInstallResponse>( Endpoints.AppManager, data );
         }
 
         private async Task<bool> PutBytes( byte[] binary, byte index, TransferType transferType )
         {
-            byte[] length = OrderByteArray( BitConverter.GetBytes( binary.Length ) );
+            byte[] length = Util.GetBytes( binary.Length );
 
             //Get token
-            var header = ConcatByteArray( new byte[] { 1 }, length, new[] { (byte)transferType, index } );
-            byte[] tokenResult = await SendMessageAsync( Endpoints.PutBytes, header );
-            if ( tokenResult == null || tokenResult.Length == 0 || tokenResult[0] != 1 )
+            var header = Util.ConcatByteArray( new byte[] { 1 }, length, new[] { (byte)transferType, index } );
+
+            var rawMessageArgs = await SendMessageAsync( Endpoints.PutBytes, header );
+            if ( rawMessageArgs == null || rawMessageArgs.Payload.Length == 0 || rawMessageArgs.Payload[0] != 1 )
                 return false;
+            byte[] tokenResult = rawMessageArgs.Payload;
             byte[] token = tokenResult.Skip( 1 ).ToArray();
 
             const int BUFFER_SIZE = 2000;
@@ -636,69 +542,31 @@ namespace flint
             for ( int i = 0; i <= binary.Length / BUFFER_SIZE; i++ )
             {
                 byte[] data = binary.Skip( BUFFER_SIZE * i ).Take( BUFFER_SIZE ).ToArray();
-                var dataHeader = ConcatByteArray( new byte[] { 2 }, token, OrderByteArray( BitConverter.GetBytes( data.Length ) ) );
-                byte[] result = await SendMessageAsync( Endpoints.PutBytes, ConcatByteArray( dataHeader, data ) );
+                var dataHeader = Util.ConcatByteArray( new byte[] { 2 }, token, Util.GetBytes( data.Length ) );
+                var result = await SendMessageAsync( Endpoints.PutBytes, Util.ConcatByteArray( dataHeader, data ) );
                 if ( result == null )
                     return false;
             }
 
             //Send commit message
             uint crc = Crc32.Calculate( binary );
-            byte[] crcBytes = OrderByteArray( BitConverter.GetBytes( crc ) );
-            byte[] commitMessage = ConcatByteArray( new byte[] { 3 }, token, crcBytes );
-            byte[] commitResult = await SendMessageAsync( Endpoints.PutBytes, commitMessage );
+            byte[] crcBytes = Util.GetBytes( crc );
+            byte[] commitMessage = Util.ConcatByteArray( new byte[] { 3 }, token, crcBytes );
+            var commitResult = await SendMessageAsync( Endpoints.PutBytes, commitMessage );
             if ( commitResult == null )
                 return false;
 
             //Send complete message
-            var completeMessage = ConcatByteArray( new byte[] { 5 }, token );
-            byte[] completeResult = await SendMessageAsync( Endpoints.PutBytes, completeMessage );
+            var completeMessage = Util.ConcatByteArray( new byte[] { 5 }, token );
+            var completeResult = await SendMessageAsync( Endpoints.PutBytes, completeMessage );
 
             return completeResult != null;
         }
 
         private void AddApp( byte index )
         {
-            byte[] indexBytes = OrderByteArray( BitConverter.GetBytes( (uint)index ) );
-            var data = ConcatByteArray( new byte[] { 3 }, indexBytes );
+            var data = Util.ConcatByteArray( new byte[] { 3 }, Util.GetBytes( (uint)index ) );
             SendMessageAsync( Endpoints.AppManager, data );
-        }
-
-        private byte[] GetBytes( ZipEntry zipEntry )
-        {
-            using ( var memoryStream = new MemoryStream() )
-            {
-                zipEntry.Extract( memoryStream );
-                memoryStream.Position = 0;
-                return memoryStream.ToArray();
-            }
-        }
-
-        private byte[] GetBytes( string @string )
-        {
-            if ( @string == null ) throw new ArgumentNullException( "string" );
-            if ( @string.Length > byte.MaxValue )
-                @string = @string.Substring( 0, byte.MaxValue );
-            byte[] bytes = new byte[@string.Length + 1];
-            bytes[0] = (byte)@string.Length;
-            Encoding.UTF8.GetBytes( @string, 0, @string.Length, bytes, 1 );
-            return bytes;
-        }
-
-        private static byte[] OrderByteArray( IEnumerable<byte> bytes )
-        {
-            if ( BitConverter.IsLittleEndian )
-                return bytes.Reverse().ToArray();
-            return bytes.ToArray();
-        }
-
-        public static byte[] ConcatByteArray( params byte[][] array )
-        {
-            var rv = new byte[array.Select( x => x.Length ).Sum()];
-
-            for ( int i = 0, insertionPoint = 0; i < array.Length; insertionPoint += array[i].Length, i++ )
-                Array.Copy( array[i], 0, rv, insertionPoint, array[i].Length );
-            return rv;
         }
 
         private class CallbackContainer

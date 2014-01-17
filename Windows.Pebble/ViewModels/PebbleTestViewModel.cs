@@ -7,15 +7,22 @@ namespace Windows.Pebble.ViewModels
     public class PebbleTestViewModel : PebbleViewModelBase
     {
         private readonly RelayCommand _pingCommand;
+        private readonly RelayCommand _badPingCommand;
 
         public PebbleTestViewModel()
         {
             _pingCommand = new RelayCommand(OnPing);
+            _badPingCommand = new RelayCommand(OnBadPing);
         }
 
         public ICommand PingCommand
         {
             get { return _pingCommand; }
+        }
+
+        public ICommand BadPingCommand
+        {
+            get { return _badPingCommand; }
         }
 
         private string _PingResponse;
@@ -32,6 +39,15 @@ namespace Windows.Pebble.ViewModels
 
             PingResponse pingResponse = await _pebble.PingAsync();
             PingResponse = pingResponse.Success ? "Success" : pingResponse.ErrorMessage;
+        }
+
+        private async void OnBadPing()
+        {
+            if ( _pebble == null || _pebble.Alive == false )
+                return;
+
+            PingResponse pingResponse = await _pebble.BadPingAsync();
+            PingResponse = pingResponse.ErrorMessage;
         }
     }
 }

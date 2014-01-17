@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Text;
 
 namespace flint.Responses
 {
@@ -26,16 +25,12 @@ namespace flint.Responses
              * 45:   HW Platform (byte)
              * 46:   Metadata version (byte)
              */
-            byte[] _ts = data.Take( 4 ).ToArray();
             if ( BitConverter.IsLittleEndian )
-            {
-                Array.Reverse( _ts );
-            }
-            DateTime timestamp = Util.TimestampToDateTime( BitConverter.ToInt32( _ts, 0 ) );
-            string version = Encoding.UTF8.GetString( data.Skip( 4 ).Take( 32 ).ToArray() );
-            string commit = Encoding.UTF8.GetString( data.Skip( 36 ).Take( 8 ).ToArray() );
-            version = version.Substring( 0, version.IndexOf( '\0' ) );
-            commit = commit.Substring( 0, commit.IndexOf( '\0' ) );
+                Array.Reverse( data, 0, 4 );
+
+            DateTime timestamp = Util.GetDateTimeFromTimestamp( BitConverter.ToInt32( data, 0 ) );
+            string version = Util.GetString( data, 4, 32 );
+            string commit = Util.GetString( data, 36, 8 );
             Boolean isRecovery = BitConverter.ToBoolean( data, 44 );
             byte hardwarePlatform = data[45];
             byte metadataVersion = data[46];

@@ -10,7 +10,16 @@
     </UserControl.DataContext>
     <Grid Margin="10">
         <StackPanel>
-            <Button Content="Send Ping" Command="{Binding PingCommand}" Padding="10,1" HorizontalAlignment="Left"/>
+            <StackPanel.Resources>
+                <Style TargetType="Button">
+                    <Setter Property="Padding" Value="10,1"/>
+                    <Setter Property="HorizontalAlignment" Value="Left" />
+                    <Setter Property="Margin" Value="0,3" />
+                </Style>
+            </StackPanel.Resources>
+            <Button Content="Send Ping" Command="{Binding PingCommand}" />
+            <Button Content="Send Bad Ping" Command="{Binding BadPingCommand}" />
+            <TextBlock Text="{Binding PingResponse, StringFormat='Ping Response: {0}'}" Margin="0,10"/>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -31,7 +31,7 @@ namespace flint
                 [DataMember(Name = "timestamp", IsRequired = true)]
                 public int Timestamp { get; private set; }
                 /// <summary> The time at which the application binary was created. (?) </summary>
-                public DateTime TimestampDT { get { return Util.TimestampToDateTime(Timestamp); } }
+                public DateTime TimestampDT { get { return Util.GetDateTimeFromTimestamp(Timestamp); } }
                 
                 /// <summary> The CRC of the application binary. </summary>
                 [DataMember(Name = "crc", IsRequired = true)]
@@ -54,7 +54,7 @@ namespace flint
                 [DataMember(Name = "timestamp", IsRequired = true)]
                 public int Timestamp { get; private set; }
                 /// <summary> The time at which the firmware binary was created. (?) </summary>
-                public DateTime TimestampDT { get { return Util.TimestampToDateTime(Timestamp); } }
+                public DateTime TimestampDT { get { return Util.GetDateTimeFromTimestamp(Timestamp); } }
 
                 /// <summary> The CRC of the firmware binary. </summary>
                 [DataMember(Name = "crc", IsRequired = true)]
@@ -87,7 +87,7 @@ namespace flint
                 [DataMember(Name = "timestamp", IsRequired = true)]
                 public int Timestamp { get; private set; }
                 /// <summary> The time at which the resources package was created. (?) </summary>
-                public DateTime TimestampDT { get { return Util.TimestampToDateTime(Timestamp); } }
+                public DateTime TimestampDT { get { return Util.GetDateTimeFromTimestamp(Timestamp); } }
 
                 /// <summary> The CRC of the resources package. </summary>
                 [DataMember(Name = "crc", IsRequired = true)]
@@ -109,7 +109,7 @@ namespace flint
             public int GeneratedAt { get; private set; }
 
             /// <summary> The date and time at which this bundle was generated. </summary>
-            public DateTime GeneratedAtDT { get { return Util.TimestampToDateTime(GeneratedAt); } }
+            public DateTime GeneratedAtDT { get { return Util.GetDateTimeFromTimestamp(GeneratedAt); } }
 
             /// <summary> Name of the machine on which this bundle was generated. </summary>
             [DataMember(Name = "generatedBy", IsRequired = true)]

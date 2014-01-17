@@ -8,10 +8,10 @@ namespace flint
     /// </summary>
     internal class RawMessageReceivedEventArgs : EventArgs
     {
-        public UInt16 Endpoint { get; private set; }
+        public ushort Endpoint { get; private set; }
         public byte[] Payload { get; private set; }
 
-        public RawMessageReceivedEventArgs( UInt16 endpoint, byte[] payload )
+        public RawMessageReceivedEventArgs( ushort endpoint, byte[] payload )
         {
             Endpoint = endpoint;
             Payload = payload;

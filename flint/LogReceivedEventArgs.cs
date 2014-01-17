@@ -28,14 +28,14 @@ namespace flint
             if (BitConverter.IsLittleEndian)
             {
                 Array.Reverse(metadata);
-                Timestamp = Util.TimestampToDateTime(BitConverter.ToInt32(metadata, 4));
+                Timestamp = Util.GetDateTimeFromTimestamp(BitConverter.ToInt32(metadata, 4));
                 Level = metadata[3];
                 messageSize = metadata[2];
                 LineNo = BitConverter.ToInt16(metadata, 0);
             }
             else
             {
-                Timestamp = Util.TimestampToDateTime(BitConverter.ToInt32(metadata, 0));
+                Timestamp = Util.GetDateTimeFromTimestamp(BitConverter.ToInt32(metadata, 0));
                 Level = metadata[4];
                 messageSize = metadata[5];
                 LineNo = BitConverter.ToInt16(metadata, 6);

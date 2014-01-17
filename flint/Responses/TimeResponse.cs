@@ -19,7 +19,7 @@ namespace flint.Responses
             }
 
             int timestamp = BitConverter.ToInt32( payload, 1 );
-            Time = Util.TimestampToDateTime( timestamp );
+            Time = Util.GetDateTimeFromTimestamp( timestamp );
         }
     }
 }

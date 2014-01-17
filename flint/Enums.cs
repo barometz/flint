@@ -65,4 +65,15 @@ namespace flint
         Gyro = 1024,
         Compass = 2048
     }
+
+    public enum LogLevel
+    {
+        Unknown = -1,
+        All = 0,
+        Error = 1,
+        Warning = 50,
+        Information = 100,
+        Debug = 200,
+        Verbose = 250
+    }
 }

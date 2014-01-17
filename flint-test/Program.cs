@@ -72,17 +72,15 @@ namespace flint_test
             menu.Add(() => pebble.NotificationSMSAsync("+3278051200", "It's time.").Wait(), "Send an SMS notification");
             menu.Add(() => pebble.NotificationMailAsync("Your pal", "URGENT NOTICE", "There is a thing you need to do. Urgently.").Wait(),
                 "Send an email notification");
-            menu.Add(() => pebble.SetNowPlaying("That dude", "That record", "That track"), "Send some metadata to the music app");
-            menu.Add(() => pebble.BadPing(), "Send a bad ping to trigger a LOGS response");
+            menu.Add(() => pebble.SetNowPlayingAsync("That dude", "That record", "That track").Wait(), "Send some metadata to the music app");
+            menu.Add(() => pebble.BadPingAsync().Wait(), "Send a bad ping to trigger a LOGS response");
             menu.Add( () => Console.WriteLine( pebble.GetTimeAsync().Result.Time ), "Get the time from the Pebble" );
             menu.Add(() => pebble.SetTime(DateTime.Now), "Sync Pebble time");
             menu.Add(() => Console.WriteLine(pebble.GetAppbankContentsAsync().Result.AppBank), "Get the contents of the app bank");
             menu.Add(() => DeleteApp(pebble), "Delete an app from the Pebble");
             menu.Add(() => pebble.Disconnect(), "Exit");
 
-            pebble.MessageReceived += pebble_MessageReceived;
             // Subscribe to specific events
-            pebble.LogReceived += pebble_LogReceived;
             pebble.RegisterCallback<MusicControlResponse>( pebble_MediaControlReceived );
             // Subscribe to an event for a particular endpoint
             pebble.RegisterCallback<PingResponse>(pingReceived);
@@ -114,16 +112,6 @@ namespace flint_test
         static void pebble_MediaControlReceived(MusicControlResponse response)
         {
             Console.WriteLine("Received " + response.Command.ToString());
-        }
-
-        static void pebble_MessageReceived(object sender, MessageReceivedEventArgs e)
-        {
-            // Method for testing anything.
-        }
-
-        static void pebble_LogReceived(object sender, LogReceivedEventArgs e)
-        {
-            Console.WriteLine(e);
         }
 
         static void pingReceived(PingResponse pingResponse)
