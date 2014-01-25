@@ -62,9 +62,7 @@ namespace flint.Responses
 
         public LogLevel GetLogLevel()
         {
-            if ( Enum.IsDefined( typeof( LogLevel ), Convert.ChangeType( Level, Enum.GetUnderlyingType( typeof( LogLevel ) ) ) ) )
-                return (LogLevel)Level;
-            return LogLevel.Unknown;
+            return Util.GetEnum( Level, LogLevel.Unknown );
         }
 
         public override string ToString()

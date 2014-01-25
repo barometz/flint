@@ -61,9 +61,9 @@ namespace Windows.Pebble.ViewModels
 
         protected override void OnPebbleDisconnected( PebbleDisconnected pebbleDisconnected )
         {
-            base.OnPebbleDisconnected(pebbleDisconnected);
-
             _pebble.UnregisterCallback<MusicControlResponse>( OnMusicControlReceived );
+
+            base.OnPebbleDisconnected(pebbleDisconnected);
         }
 
         private void OnMusicControlReceived( MusicControlResponse response )

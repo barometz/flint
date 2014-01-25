@@ -75,7 +75,7 @@ namespace flint_test
             menu.Add(() => pebble.SetNowPlayingAsync("That dude", "That record", "That track").Wait(), "Send some metadata to the music app");
             menu.Add(() => pebble.BadPingAsync().Wait(), "Send a bad ping to trigger a LOGS response");
             menu.Add( () => Console.WriteLine( pebble.GetTimeAsync().Result.Time ), "Get the time from the Pebble" );
-            menu.Add(() => pebble.SetTime(DateTime.Now), "Sync Pebble time");
+            menu.Add(() => pebble.SetTimeAsync(DateTime.Now).Wait(), "Sync Pebble time");
             menu.Add(() => Console.WriteLine(pebble.GetAppbankContentsAsync().Result.AppBank), "Get the contents of the app bank");
             menu.Add(() => DeleteApp(pebble), "Delete an app from the Pebble");
             menu.Add(() => pebble.Disconnect(), "Exit");

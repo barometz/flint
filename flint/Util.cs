@@ -52,12 +52,12 @@ namespace flint
         /// <returns></returns>
         public static DateTime GetDateTimeFromTimestamp( Int32 ts )
         {
-            return new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ).AddSeconds( ts );
+            return new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Unspecified ).AddSeconds( ts );
         }
 
         public static int GetTimestampFromDateTime( DateTime dateTime )
         {
-            return (int)( new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Utc ) - DateTime.UtcNow ).TotalSeconds;
+            return (int)( dateTime - new DateTime( 1970, 1, 1, 0, 0, 0, dateTime.Kind ) ).TotalSeconds;
         }
 
         public static byte[] GetBytes( ZipEntry zipEntry )
@@ -99,12 +99,21 @@ namespace flint
 
         public static string GetString( byte[] bytes, int index, int count )
         {
-            string @string = Encoding.UTF8.GetString(bytes, index, count);
-            int nullIndex = @string.IndexOf('\0');
-            if (nullIndex >= 0)
-                @string = @string.Substring(0, nullIndex);
+            string @string = Encoding.UTF8.GetString( bytes, index, count );
+            int nullIndex = @string.IndexOf( '\0' );
+            if ( nullIndex >= 0 )
+                @string = @string.Substring( 0, nullIndex );
 
             return @string;
+        }
+
+        public static uint GetUint32( byte[] bytes, int index )
+        {
+            if ( BitConverter.IsLittleEndian )
+            {
+                Array.Reverse( bytes, index, 4 );
+            }
+            return BitConverter.ToUInt32( bytes, index );
         }
 
         public static byte[] ConcatByteArray( params byte[][] array )
@@ -114,6 +123,17 @@ namespace flint
             for ( int i = 0, insertionPoint = 0; i < array.Length; insertionPoint += array[i].Length, i++ )
                 Array.Copy( array[i], 0, rv, insertionPoint, array[i].Length );
             return rv;
+        }
+
+        public static T GetEnum<T>( object value, T @default = default(T) ) where T : struct
+        {
+            var genericType = typeof (T);
+            if (genericType.IsEnum == false)
+                throw new InvalidOperationException(string.Format("{0} is not an enum type", genericType.FullName));
+            if ( Enum.IsDefined( genericType, Convert.ChangeType( value, Enum.GetUnderlyingType( genericType ) ) ) )
+                return (T)value;
+            return @default;
+
         }
     }
 }

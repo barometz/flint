@@ -14,8 +14,6 @@ namespace flint
     /// </remarks>
     public class AppBank
     {
-        public const int MINIMUM_HEADER_SIZE = 9;
-
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         public struct App
         {
@@ -29,17 +27,19 @@ namespace flint
             public readonly string Company;
             [MarshalAs(UnmanagedType.U4)]
             public readonly uint Flags;
-            [MarshalAs(UnmanagedType.U1)]
-            public readonly byte MajorVersion;
-            [MarshalAs(UnmanagedType.U1)]
-            public readonly byte MinorVersion;
+            [MarshalAs( UnmanagedType.U2 )] 
+            public readonly ushort Version;
+            //[MarshalAs(UnmanagedType.U1)]
+            //public readonly byte MajorVersion;
+            //[MarshalAs(UnmanagedType.U1)]
+            //public readonly byte MinorVersion;
             /// <summary> A string representation of the app version. </summary>
-            public string Version { get { return String.Format("{0}.{1}", MajorVersion, MinorVersion); } }
+            //public string Version { get { return string.Format("{0}.{1}", MajorVersion, MinorVersion); } }
 
             public override string ToString()
             {
                 const string format = "{0}, version {1} by {2}";
-                return String.Format(format, Name, Version, Company);
+                return string.Format(format, Name, Version, Company);
             }
         }
         /// <summary> The number of available (free and occupied) app slots (?) </summary>
@@ -53,6 +53,8 @@ namespace flint
         /// <param name="bytes">The entire payload from an appropriate APP_MANAGER message.</param>
         public AppBank(byte[] bytes)
         {
+            const int MINIMUM_HEADER_SIZE = 9;
+
             const int appInfoSize = 78;
             Apps = new List<App>();
             if (bytes.Length < MINIMUM_HEADER_SIZE)

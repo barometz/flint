@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using System.Windows.Threading;
+using GalaSoft.MvvmLight.Command;
 using Windows.Pebble.Messages;
 using flint;
 using flint.Responses;
@@ -10,11 +12,26 @@ namespace Windows.Pebble.ViewModels
     public class PebbleInfoViewModel : PebbleViewModelBase
     {
         private readonly DispatcherTimer _timer = new DispatcherTimer( DispatcherPriority.Background );
+        private readonly RelayCommand _syncTimeCommand;
+
+        private TimeSpan? _PebbleTimeOffset;
 
         public PebbleInfoViewModel()
         {
+            _syncTimeCommand = new RelayCommand(OnSyncTime);
+
             _timer.Tick += ( sender, e ) => UpdateTimes();
             _timer.Interval = TimeSpan.FromSeconds( 1 );
+        }
+
+        public ICommand SyncTimeCommand
+        {
+            get { return _syncTimeCommand; }
+        }
+
+        public DateTime? CurrentTime
+        {
+            get { return DateTime.Now; }
         }
 
         private DateTime? _PebbleTime;
@@ -22,11 +39,6 @@ namespace Windows.Pebble.ViewModels
         {
             get { return _PebbleTime; }
             private set { Set( () => PebbleTime, ref _PebbleTime, value ); }
-        }
-
-        public DateTime? CurrentTime
-        {
-            get { return DateTime.Now; }
         }
 
         private FirmwareVersion _Firmware;
@@ -47,6 +59,8 @@ namespace Windows.Pebble.ViewModels
         {
             base.OnPebbleConnected( pebbleConnected );
             await LoadFirmwareAsync();
+            await LoadPebbleTimeAsync();
+            _timer.Start();
         }
 
         protected override void OnPebbleDisconnected( PebbleDisconnected pebbleDisconnected )
@@ -55,15 +69,28 @@ namespace Windows.Pebble.ViewModels
             _timer.Stop();
         }
 
-        private async void UpdateTimes()
+        private async void OnSyncTime()
+        {
+            await _pebble.SetTimeAsync(DateTime.Now);
+            await LoadPebbleTimeAsync();
+        }
+
+        private async Task LoadPebbleTimeAsync()
         {
             if ( _pebble != null && _pebble.Alive )
             {
                 TimeResponse timeResult = await _pebble.GetTimeAsync();
                 if ( timeResult.Success )
-                    PebbleTime = timeResult.Time;
+                {
+                    _PebbleTimeOffset = timeResult.Time - DateTime.Now;
+                }
             }
+        }
 
+        private void UpdateTimes()
+        {
+            if ( _PebbleTimeOffset != null )
+                PebbleTime = DateTime.Now + _PebbleTimeOffset.Value;
             RaisePropertyChanged( () => CurrentTime );
         }
 

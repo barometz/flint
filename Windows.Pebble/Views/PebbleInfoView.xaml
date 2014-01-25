@@ -14,10 +14,24 @@
             <RowDefinition Height="Auto" />
             <RowDefinition />
         </Grid.RowDefinitions>
-        <StackPanel>
-            <TextBlock Text="{Binding PebbleTime, StringFormat='Pebble Time: {0:G}'}" />
-            <TextBlock Text="{Binding CurrentTime, StringFormat='System Time: {0:G}'}" />
-        </StackPanel>
+        <GroupBox Header="Time">
+        <Grid Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding PebbleTime, StringFormat='Pebble: {0:G}'}" />
+            <TextBlock Text="{Binding CurrentTime, StringFormat='System: {0:G}'}" Grid.Row="1"/>
+            <Button Command="{Binding SyncTimeCommand}" Grid.Column="1" Grid.RowSpan="2" VerticalAlignment="Center"
+                    ToolTip="Sync pebble time with system time">
+                <Path Style="{StaticResource SyncIconStyle}" Height="18"/>
+            </Button>
+        </Grid>
+        </GroupBox>
         <Grid Grid.Row="1" Margin="0,5,0,0">
             <Grid.Resources>
                 <DataTemplate x:Key="FirmwareTemplate" DataType="flint:FirmwareVersion">
