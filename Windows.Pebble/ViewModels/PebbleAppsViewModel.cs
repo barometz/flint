@@ -60,8 +60,12 @@ namespace Windows.Pebble.ViewModels
             var appBankContents = await _pebble.GetAppbankContentsAsync();
             _apps.Clear();
             if ( appBankContents.Success )
-                foreach ( var app in appBankContents.AppBank.Apps ) //TODO There is a null ref exception.... not sure which property is null
+                foreach ( var app in appBankContents.AppBank.Apps )
                     _apps.Add( app );
+            else
+            {
+                
+            }
             Loading = false;
         }
 

@@ -220,7 +220,7 @@ namespace flint
         public async Task<PingResponse> PingAsync( uint pingData = 0 )
         {
             // No need to worry about endianness as it's sent back byte for byte anyway.
-            byte[] data = Util.ConcatByteArray( new byte[] { 0 }, BitConverter.GetBytes( pingData ) );
+            byte[] data = Util.CombineArrays( new byte[] { 0 }, BitConverter.GetBytes( pingData ) );
 
             return await SendMessageAsync<PingResponse>( Endpoints.Ping, data );
         }
@@ -283,7 +283,7 @@ namespace flint
             byte[] albumBytes = Util.GetBytes( album );
             byte[] trackBytes = Util.GetBytes( track );
 
-            byte[] data = Util.ConcatByteArray( new byte[] { 16 }, artistBytes, albumBytes, trackBytes );
+            byte[] data = Util.CombineArrays( new byte[] { 16 }, artistBytes, albumBytes, trackBytes );
 
             await SendMessageNoResponseAsync( Endpoints.MusicControl, data );
         }
@@ -293,7 +293,7 @@ namespace flint
         public async Task SetTimeAsync( DateTime dateTime )
         {
             byte[] timestamp = Util.GetBytes( Util.GetTimestampFromDateTime( dateTime ) );
-            byte[] data = Util.ConcatByteArray( new byte[] { 2 }, timestamp );
+            byte[] data = Util.CombineArrays( new byte[] { 2 }, timestamp );
             await SendMessageNoResponseAsync( Endpoints.Time, data );
         }
 
@@ -406,7 +406,7 @@ namespace flint
         /// <returns></returns>
         public async Task<AppbankInstallResponse> RemoveAppAsync( AppBank.App app )
         {
-            var msg = Util.ConcatByteArray( new byte[] { 2 },
+            var msg = Util.CombineArrays( new byte[] { 2 },
                 Util.GetBytes( app.ID ),
                 Util.GetBytes( app.Index ) );
 
@@ -425,9 +425,12 @@ namespace flint
                 eventHandler = ( sender, e ) =>
                 {
                     if ( e.Endpoint == (ushort)endpoint )
-                        result.Load( e.Payload );
+                        result.SetPayload( e.Payload );
                     else if ( e.Endpoint == (ushort)Endpoints.Logs )
                         result.SetError( e.Payload );
+                    else
+                        //TODO: Do we need to preserve these messages?
+                        return;
 
                     _PebbleProt.RawMessageReceived -= eventHandler;
                     resetEvent.Set();
@@ -446,9 +449,14 @@ namespace flint
                 }
                 catch ( TimeoutException )
                 {
+                    result.SetError( "TimeoutException occurred" );
                     Disconnect();
                 }
-                return null;
+                catch ( Exception e )
+                {
+                    result.SetError( e.Message );
+                }
+                return result;
             } );
         }
 
@@ -502,7 +510,7 @@ namespace flint
 
         private async Task<AppbankInstallResponse> RemoveAppByUUID( byte[] uuid )
         {
-            byte[] data = Util.ConcatByteArray( new byte[] { 2 }, uuid );
+            byte[] data = Util.CombineArrays( new byte[] { 2 }, uuid );
             return await SendMessageAsync<AppbankInstallResponse>( Endpoints.AppManager, data );
         }
 
@@ -511,7 +519,7 @@ namespace flint
             byte[] length = Util.GetBytes( binary.Length );
 
             //Get token
-            var header = Util.ConcatByteArray( new byte[] { 1 }, length, new[] { (byte)transferType, index } );
+            var header = Util.CombineArrays( new byte[] { 1 }, length, new[] { (byte)transferType, index } );
 
             var rawMessageArgs = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, header );
             if ( rawMessageArgs.Success == false )
@@ -524,8 +532,8 @@ namespace flint
             for ( int i = 0; i <= binary.Length / BUFFER_SIZE; i++ )
             {
                 byte[] data = binary.Skip( BUFFER_SIZE * i ).Take( BUFFER_SIZE ).ToArray();
-                var dataHeader = Util.ConcatByteArray( new byte[] { 2 }, token, Util.GetBytes( data.Length ) );
-                var result = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, Util.ConcatByteArray( dataHeader, data ) );
+                var dataHeader = Util.CombineArrays( new byte[] { 2 }, token, Util.GetBytes( data.Length ) );
+                var result = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, Util.CombineArrays( dataHeader, data ) );
                 if ( result.Success == false )
                     return false;
             }
@@ -533,13 +541,13 @@ namespace flint
             //Send commit message
             uint crc = Crc32.Calculate( binary );
             byte[] crcBytes = Util.GetBytes( crc );
-            byte[] commitMessage = Util.ConcatByteArray( new byte[] { 3 }, token, crcBytes );
+            byte[] commitMessage = Util.CombineArrays( new byte[] { 3 }, token, crcBytes );
             var commitResult = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, commitMessage );
             if ( commitResult.Success == false )
                 return false;
 
             //Send complete message
-            var completeMessage = Util.ConcatByteArray( new byte[] { 5 }, token );
+            var completeMessage = Util.CombineArrays( new byte[] { 5 }, token );
             var completeResult = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, completeMessage );
 
             return completeResult.Success;
@@ -547,7 +555,7 @@ namespace flint
 
         private async Task AddApp( byte index )
         {
-            var data = Util.ConcatByteArray( new byte[] { 3 }, Util.GetBytes( (uint)index ) );
+            var data = Util.CombineArrays( new byte[] { 3 }, Util.GetBytes( (uint)index ) );
             await SendMessageNoResponseAsync( Endpoints.AppManager, data );
         }
 
@@ -569,7 +577,7 @@ namespace flint
 
             public void Invoke( byte[] payload )
             {
-                _response.Load( payload );
+                _response.SetPayload( payload );
                 _delegate.DynamicInvoke( _response );
             }
 

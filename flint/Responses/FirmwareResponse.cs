@@ -8,7 +8,7 @@ namespace flint.Responses
         public FirmwareVersion Firmware { get; private set; }
         public FirmwareVersion RecoveryFirmware { get; private set; }
 
-        public override void Load( byte[] payload )
+        protected override void Load( byte[] payload )
         {
             Firmware = ParseVersion( payload.Skip( 1 ).Take( 47 ).ToArray() );
             RecoveryFirmware = ParseVersion( payload.Skip( 48 ).Take( 47 ).ToArray() );

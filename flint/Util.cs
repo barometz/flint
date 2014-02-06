@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -116,7 +115,7 @@ namespace flint
             return BitConverter.ToUInt32( bytes, index );
         }
 
-        public static byte[] ConcatByteArray( params byte[][] array )
+        public static byte[] CombineArrays( params byte[][] array )
         {
             var rv = new byte[array.Select( x => x.Length ).Sum()];
 
@@ -127,9 +126,9 @@ namespace flint
 
         public static T GetEnum<T>( object value, T @default = default(T) ) where T : struct
         {
-            var genericType = typeof (T);
-            if (genericType.IsEnum == false)
-                throw new InvalidOperationException(string.Format("{0} is not an enum type", genericType.FullName));
+            var genericType = typeof( T );
+            if ( genericType.IsEnum == false )
+                throw new InvalidOperationException( string.Format( "{0} is not an enum type", genericType.FullName ) );
             if ( Enum.IsDefined( genericType, Convert.ChangeType( value, Enum.GetUnderlyingType( genericType ) ) ) )
                 return (T)value;
             return @default;

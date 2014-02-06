@@ -38,8 +38,7 @@ namespace flint
 
             public override string ToString()
             {
-                const string format = "{0}, version {1} by {2}";
-                return string.Format(format, Name, Version, Company);
+                return string.Format("{0}, version {1} by {2}", Name, Version, Company);
             }
         }
         /// <summary> The number of available (free and occupied) app slots (?) </summary>
@@ -62,15 +61,9 @@ namespace flint
                 throw new ArgumentOutOfRangeException("Payload is shorter than 9 bytes, "+
                     "which is the minimum size for an appbank content response.");
             }
-            
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(bytes, 1, 4);
-                Array.Reverse(bytes, 5, 4);
-            }
-            Size = BitConverter.ToUInt32(bytes, 1);
-            
-            uint appCount = BitConverter.ToUInt32(bytes, 5);
+
+            Size = Util.GetUint32( bytes, 1 );
+            uint appCount = Util.GetUint32(bytes, 5);
             if (bytes.Length < MINIMUM_HEADER_SIZE + appCount * appInfoSize)
             {
                 throw new ArgumentOutOfRangeException("Payload is not large enough for the claimed number of installed apps.");

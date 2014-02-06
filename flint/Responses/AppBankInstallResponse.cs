@@ -13,7 +13,7 @@ namespace flint.Responses
 
         public MessageType MsgType { get; private set; }
 
-        public override void Load( byte[] payload )
+        protected override void Load( byte[] payload )
         {
             if (BitConverter.IsLittleEndian)
             {

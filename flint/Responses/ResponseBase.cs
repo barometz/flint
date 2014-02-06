@@ -1,11 +1,21 @@
 ﻿using System;
-using System.Linq;
 
 namespace flint.Responses
 {
     public abstract class ResponseBase : IResponse
     {
-        public abstract void Load( byte[] payload );
+        protected ResponseBase()
+        {
+            ErrorMessage = "Response not set";
+        }
+
+        protected abstract void Load( byte[] payload );
+
+        public void SetPayload( byte[] payload )
+        {
+            ErrorMessage = null;
+            Load( payload );
+        }
 
         public void SetError( string message )
         {

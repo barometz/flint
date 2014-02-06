@@ -2,7 +2,7 @@
 {
     public interface IResponse
     {
-        void Load( byte[] payload );
+        void SetPayload( byte[] payload );
         void SetError( string message );
         void SetError( byte[] errorPayload );
 

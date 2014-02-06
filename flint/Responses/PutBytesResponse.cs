@@ -4,7 +4,7 @@
     {
         public byte[] Response { get; private set; }
 
-        public override void Load( byte[] payload )
+        protected override void Load( byte[] payload )
         {
             if (payload.Length == 0 || payload[0] != 1)
             {
