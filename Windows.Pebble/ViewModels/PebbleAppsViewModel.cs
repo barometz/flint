@@ -62,10 +62,6 @@ namespace Windows.Pebble.ViewModels
             if ( appBankContents.Success )
                 foreach ( var app in appBankContents.AppBank.Apps )
                     _apps.Add( app );
-            else
-            {
-                
-            }
             Loading = false;
         }
 

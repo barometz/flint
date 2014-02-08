@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
-using System.Threading;
 using System.Threading.Tasks;
 using InTheHand.Net.Sockets;
 using System;
@@ -18,8 +17,6 @@ namespace flint
     /// </summary>
     public class Pebble
     {
-        // TODO: Exception handling.
-
         public enum SessionCaps : uint
         {
             GAMMA_RAY = 0x80000000
@@ -35,7 +32,6 @@ namespace flint
         }
 
         private readonly Dictionary<Type, List<CallbackContainer>> _callbackHandlers;
-        private static readonly Dictionary<Endpoints, Type> _endpointToResponseMap;
 
         /// <summary> The four-char ID for the Pebble, based on its BT address. 
         /// </summary>
@@ -54,19 +50,9 @@ namespace flint
         public int PingTimeout { get; set; }
 
         private readonly PebbleProtocol _PebbleProt;
+        private readonly ResponseManager _responseManager = new ResponseManager();
         private uint _SessionCaps = (uint)SessionCaps.GAMMA_RAY;
         private uint _RemoteCaps = (uint)( RemoteCaps.Telephony | RemoteCaps.SMS | RemoteCaps.Android );
-
-        static Pebble()
-        {
-            _endpointToResponseMap = new Dictionary<Endpoints, Type>();
-            _endpointToResponseMap.Add( Endpoints.AppManager, typeof( AppbankResponse ) );
-            _endpointToResponseMap.Add( Endpoints.FirmwareVersion, typeof( FirmwareResponse ) );
-            _endpointToResponseMap.Add( Endpoints.Ping, typeof( PingResponse ) );
-            _endpointToResponseMap.Add( Endpoints.Time, typeof( TimeResponse ) );
-            _endpointToResponseMap.Add( Endpoints.MusicControl, typeof( MusicControlResponse ) );
-            _endpointToResponseMap.Add( Endpoints.PhoneVersion, typeof( PhoneVersionResponse ) );
-        }
 
         /// <summary> Create a new Pebble 
         /// </summary>
@@ -84,7 +70,7 @@ namespace flint
             _PebbleProt = new PebbleProtocol( port );
             _PebbleProt.RawMessageReceived += RawMessageReceived;
 
-            //This is received immediately after connecting
+            //This is received immediately after connecting, and we must respond to it
             RegisterCallback<PhoneVersionResponse>( PhoneVersionReceived );
             //TODO: when are these called?
             //RegisterEndpointCallback( Endpoints.PhoneVersion, PhoneVersionReceived );
@@ -222,7 +208,7 @@ namespace flint
             // No need to worry about endianness as it's sent back byte for byte anyway.
             byte[] data = Util.CombineArrays( new byte[] { 0 }, BitConverter.GetBytes( pingData ) );
 
-            return await SendMessageAsync<PingResponse>( Endpoints.Ping, data );
+            return await SendMessageAsync<PingResponse>( Endpoint.Ping, data );
         }
 
         /// <summary> Generic notification support.  Shouldn't have to use this, but feel free. </summary>
@@ -237,7 +223,7 @@ namespace flint
 
             byte[] data = { type };
             data = parts.Aggregate( data, ( current, part ) => current.Concat( Util.GetBytes( part ) ).ToArray() );
-            await SendMessageNoResponseAsync( Endpoints.Notification, data );
+            await SendMessageNoResponseAsync( Endpoint.Notification, data );
         }
 
         /// <summary>
@@ -285,7 +271,7 @@ namespace flint
 
             byte[] data = Util.CombineArrays( new byte[] { 16 }, artistBytes, albumBytes, trackBytes );
 
-            await SendMessageNoResponseAsync( Endpoints.MusicControl, data );
+            await SendMessageNoResponseAsync( Endpoint.MusicControl, data );
         }
 
         /// <summary> Set the time on the Pebble. Mostly convenient for syncing. </summary>
@@ -294,14 +280,14 @@ namespace flint
         {
             byte[] timestamp = Util.GetBytes( Util.GetTimestampFromDateTime( dateTime ) );
             byte[] data = Util.CombineArrays( new byte[] { 2 }, timestamp );
-            await SendMessageNoResponseAsync( Endpoints.Time, data );
+            await SendMessageNoResponseAsync( Endpoint.Time, data );
         }
 
         /// <summary> Send a malformed ping (to trigger a LOGS response) </summary>
         public async Task<PingResponse> BadPingAsync()
         {
             byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
-            return await SendMessageAsync<PingResponse>( Endpoints.Ping, cookie );
+            return await SendMessageAsync<PingResponse>( Endpoint.Ping, cookie );
         }
 
         public async Task InstallAppAsync( PebbleBundle bundle, IProgress<ProgressValue> progress = null )
@@ -370,9 +356,9 @@ namespace flint
                 progress.Report( new ProgressValue( "Done", 100 ) );
         }
 
-        public async Task<FirmwareResponse> GetFirmwareVersionAsync()
+        public async Task<FirmwareVersionResponse> GetFirmwareVersionAsync()
         {
-            return await SendMessageAsync<FirmwareResponse>( Endpoints.FirmwareVersion, new byte[] { 0 } );
+            return await SendMessageAsync<FirmwareVersionResponse>( Endpoint.FirmwareVersion, new byte[] { 0 } );
         }
 
         /// <summary>
@@ -383,7 +369,7 @@ namespace flint
         /// <returns>A TimeReceivedEventArgs with the time, or null.</returns>
         public async Task<TimeResponse> GetTimeAsync()
         {
-            return await SendMessageAsync<TimeResponse>( Endpoints.Time, new byte[] { 0 } );
+            return await SendMessageAsync<TimeResponse>( Endpoint.Time, new byte[] { 0 } );
         }
 
         /// <summary>
@@ -394,7 +380,7 @@ namespace flint
         /// <returns></returns>
         public async Task<AppbankResponse> GetAppbankContentsAsync()
         {
-            return await SendMessageAsync<AppbankResponse>( Endpoints.AppManager, new byte[] { 1 } );
+            return await SendMessageAsync<AppbankResponse>( Endpoint.AppManager, new byte[] { 1 }, x => x.ResponseType == AppbankResponse.AppbankResponseType.Apps );
         }
 
         /// <summary>
@@ -410,57 +396,43 @@ namespace flint
                 Util.GetBytes( app.ID ),
                 Util.GetBytes( app.Index ) );
 
-            return await SendMessageAsync<AppbankInstallResponse>( Endpoints.AppManager, msg );
+            return await SendMessageAsync<AppbankInstallResponse>( Endpoint.AppManager, msg );
         }
 
-        private async Task<T> SendMessageAsync<T>( Endpoints endpoint, byte[] payload )
+        private async Task<T> SendMessageAsync<T>( Endpoint endpoint, byte[] payload, Func<T, bool> responseMatchPredicate = null )
             where T : class, IResponse, new()
         {
             return await Task.Run( () =>
             {
-                var resetEvent = new ManualResetEvent( false );
-                var result = new T();
-
-                EventHandler<RawMessageReceivedEventArgs> eventHandler = null;
-                eventHandler = ( sender, e ) =>
-                {
-                    if ( e.Endpoint == (ushort)endpoint )
-                        result.SetPayload( e.Payload );
-                    else if ( e.Endpoint == (ushort)Endpoints.Logs )
-                        result.SetError( e.Payload );
-                    else
-                        //TODO: Do we need to preserve these messages?
-                        return;
-
-                    _PebbleProt.RawMessageReceived -= eventHandler;
-                    resetEvent.Set();
-                };
                 try
                 {
                     lock ( _PebbleProt )
                     {
-                        _PebbleProt.RawMessageReceived += eventHandler;
-                        _PebbleProt.SendMessage( (ushort)endpoint, payload );
-                        if ( resetEvent.WaitOne( TimeSpan.FromSeconds( ( 5 ) ) ) == false )
-                            result.SetError( "Timed out waiting for a response" );
-                        _PebbleProt.RawMessageReceived -= eventHandler;
-                        return result;
+                        using ( var responseTransaction = _responseManager.GetTransaction<T>() )
+                        {
+                            _PebbleProt.SendMessage( (ushort)endpoint, payload );
+                            //TODO: move this timeout to a property where it can be configured
+                            return responseTransaction.AwaitResponse(TimeSpan.FromSeconds(5));
+                        }
                     }
                 }
                 catch ( TimeoutException )
                 {
+                    var result = new T();
                     result.SetError( "TimeoutException occurred" );
                     Disconnect();
+                    return result;
                 }
                 catch ( Exception e )
                 {
+                    var result = new T();
                     result.SetError( e.Message );
+                    return result;
                 }
-                return result;
             } );
         }
 
-        private Task SendMessageNoResponseAsync( Endpoints endpoint, byte[] payload )
+        private Task SendMessageNoResponseAsync( Endpoint endpoint, byte[] payload )
         {
             return Task.Run( () =>
             {
@@ -473,16 +445,18 @@ namespace flint
 
         private void RawMessageReceived( object sender, RawMessageReceivedEventArgs e )
         {
-            Debug.WriteLine( "Received Message for Endpoint: {0}", (Endpoints)e.Endpoint );
-            Type responseType;
-            if ( _endpointToResponseMap.TryGetValue( (Endpoints)e.Endpoint, out responseType ) )
+            Debug.WriteLine( "Received Message for Endpoint: {0}", (Endpoint)e.Endpoint );
+
+            IResponse response = _responseManager.HandleResponse((Endpoint) e.Endpoint, e.Payload);
+
+            if ( response != null )
             {
                 //Check for callbacks
                 List<CallbackContainer> callbacks;
-                if ( _callbackHandlers.TryGetValue( responseType, out callbacks ) )
+                if ( _callbackHandlers.TryGetValue( response.GetType(), out callbacks ) )
                 {
                     foreach ( var callback in callbacks )
-                        callback.Invoke( e.Payload );
+                        callback.Invoke( response );
                 }
             }
         }
@@ -500,7 +474,7 @@ namespace flint
 
             var msg = new byte[0];
             msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
-            await SendMessageNoResponseAsync( Endpoints.PhoneVersion, msg );
+            await SendMessageNoResponseAsync( Endpoint.PhoneVersion, msg );
         }
 
         public override string ToString()
@@ -511,7 +485,7 @@ namespace flint
         private async Task<AppbankInstallResponse> RemoveAppByUUID( byte[] uuid )
         {
             byte[] data = Util.CombineArrays( new byte[] { 2 }, uuid );
-            return await SendMessageAsync<AppbankInstallResponse>( Endpoints.AppManager, data );
+            return await SendMessageAsync<AppbankInstallResponse>( Endpoint.AppManager, data );
         }
 
         private async Task<bool> PutBytes( byte[] binary, byte index, TransferType transferType )
@@ -521,7 +495,7 @@ namespace flint
             //Get token
             var header = Util.CombineArrays( new byte[] { 1 }, length, new[] { (byte)transferType, index } );
 
-            var rawMessageArgs = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, header );
+            var rawMessageArgs = await SendMessageAsync<PutBytesResponse>( Endpoint.PutBytes, header );
             if ( rawMessageArgs.Success == false )
                 return false;
             byte[] tokenResult = rawMessageArgs.Response;
@@ -533,7 +507,7 @@ namespace flint
             {
                 byte[] data = binary.Skip( BUFFER_SIZE * i ).Take( BUFFER_SIZE ).ToArray();
                 var dataHeader = Util.CombineArrays( new byte[] { 2 }, token, Util.GetBytes( data.Length ) );
-                var result = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, Util.CombineArrays( dataHeader, data ) );
+                var result = await SendMessageAsync<PutBytesResponse>( Endpoint.PutBytes, Util.CombineArrays( dataHeader, data ) );
                 if ( result.Success == false )
                     return false;
             }
@@ -542,13 +516,13 @@ namespace flint
             uint crc = Crc32.Calculate( binary );
             byte[] crcBytes = Util.GetBytes( crc );
             byte[] commitMessage = Util.CombineArrays( new byte[] { 3 }, token, crcBytes );
-            var commitResult = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, commitMessage );
+            var commitResult = await SendMessageAsync<PutBytesResponse>( Endpoint.PutBytes, commitMessage );
             if ( commitResult.Success == false )
                 return false;
 
             //Send complete message
             var completeMessage = Util.CombineArrays( new byte[] { 5 }, token );
-            var completeResult = await SendMessageAsync<PutBytesResponse>( Endpoints.PutBytes, completeMessage );
+            var completeResult = await SendMessageAsync<PutBytesResponse>( Endpoint.PutBytes, completeMessage );
 
             return completeResult.Success;
         }
@@ -556,18 +530,16 @@ namespace flint
         private async Task AddApp( byte index )
         {
             var data = Util.CombineArrays( new byte[] { 3 }, Util.GetBytes( (uint)index ) );
-            await SendMessageNoResponseAsync( Endpoints.AppManager, data );
+            await SendMessageNoResponseAsync( Endpoint.AppManager, data );
         }
 
         private class CallbackContainer
         {
-            private readonly IResponse _response;
             private readonly Delegate _delegate;
 
-            private CallbackContainer( Delegate @delegate, IResponse response )
+            private CallbackContainer( Delegate @delegate )
             {
                 _delegate = @delegate;
-                _response = response;
             }
 
             public bool IsMatch<T>( Action<T> callback )
@@ -575,15 +547,14 @@ namespace flint
                 return _delegate == (Delegate)callback;
             }
 
-            public void Invoke( byte[] payload )
+            public void Invoke( IResponse response )
             {
-                _response.SetPayload( payload );
-                _delegate.DynamicInvoke( _response );
+                _delegate.DynamicInvoke( response );
             }
 
             public static CallbackContainer Create<T>( Action<T> callback ) where T : IResponse, new()
             {
-                return new CallbackContainer( callback, new T() );
+                return new CallbackContainer( callback );
             }
         }
     }

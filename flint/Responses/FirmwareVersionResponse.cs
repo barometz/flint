@@ -3,7 +3,8 @@ using System.Linq;
 
 namespace flint.Responses
 {
-    public class FirmwareResponse : ResponseBase
+    [Endpoint(Endpoint.FirmwareVersion)]
+    public class FirmwareVersionResponse : ResponseBase
     {
         public FirmwareVersion Firmware { get; private set; }
         public FirmwareVersion RecoveryFirmware { get; private set; }

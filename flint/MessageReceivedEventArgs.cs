@@ -7,10 +7,10 @@ namespace flint
     /// </summary>
     public class MessageReceivedEventArgs : EventArgs
     {
-        public Endpoints Endpoint { get; private set; }
+        public Endpoint Endpoint { get; private set; }
         public byte[] Payload { get; private set; }
 
-        public MessageReceivedEventArgs(Endpoints endPoint, byte[] payload)
+        public MessageReceivedEventArgs(Endpoint endPoint, byte[] payload)
         {
             Endpoint = endPoint;
             Payload = new byte[payload.Length];

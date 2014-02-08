@@ -64,9 +64,11 @@
     <Compile Include="AppBank.cs" />
     <Compile Include="Enums.cs" />
     <Compile Include="ProgressValue.cs" />
+    <Compile Include="ResponseManager.cs" />
     <Compile Include="Responses\AppBankInstallResponse.cs" />
     <Compile Include="Responses\AppbankResponse.cs" />
-    <Compile Include="Responses\FirmwareResponse.cs" />
+    <Compile Include="Responses\EndpointAttribute.cs" />
+    <Compile Include="Responses\FirmwareVersionResponse.cs" />
     <Compile Include="Responses\MusicControlResponse.cs" />
     <Compile Include="Responses\PhoneVersionResponse.cs" />
     <Compile Include="Responses\PutBytesResponse.cs" />
@@ -86,6 +88,7 @@
     <Compile Include="RawMessageReceivedEventArgs.cs" />
     <Compile Include="Responses\TimeResponse.cs" />
     <Compile Include="Util.cs" />
+    <Compile Include="UUID.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="flint.ico" />

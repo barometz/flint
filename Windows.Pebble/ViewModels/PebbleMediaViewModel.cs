@@ -70,15 +70,15 @@ namespace Windows.Pebble.ViewModels
         {
             switch ( response.Command )
             {
-                case MediaControls.PlayPause:
+                case MediaControl.PlayPause:
                     NativeMethods.SendMessage( AppCommandCode.MediaPlayPause );
                     AddCommandReceived( "Play/Pause" );
                     break;
-                case MediaControls.Next:
+                case MediaControl.Next:
                     NativeMethods.SendMessage( AppCommandCode.MediaNextTrack );
                     AddCommandReceived( "Next Track" );
                     break;
-                case MediaControls.Previous:
+                case MediaControl.Previous:
                     NativeMethods.SendMessage( AppCommandCode.MediaPreviousTrack );
                     AddCommandReceived( "Previous Track" );
                     break;

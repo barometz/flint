@@ -3,7 +3,7 @@
 namespace flint
 {
     /// <summary> Media control instructions as understood by Pebble </summary>
-    public enum MediaControls : byte
+    public enum MediaControl : byte
     {
         None= 0,
         PlayPause = 1,
@@ -20,7 +20,7 @@ namespace flint
     /// <summary> Endpoints (~"commands") used by Pebble to indicate particular instructions 
     /// or instruction types.
     /// </summary>
-    public enum Endpoints : ushort
+    public enum Endpoint : ushort
     {
         Firmware = 1,
         Time = 11,

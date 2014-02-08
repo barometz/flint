@@ -1,13 +1,14 @@
 ﻿
 namespace flint.Responses
 {
+    [Endpoint(Endpoint.MusicControl)]
     public class MusicControlResponse : ResponseBase
     {
-        public MediaControls Command { get; private set; }
+        public MediaControl Command { get; private set; }
 
         protected override void Load( byte[] payload )
         {
-            Command = (MediaControls) payload[0];
+            Command = Util.GetEnum<MediaControl>(payload[0]);
         }
     }
 }

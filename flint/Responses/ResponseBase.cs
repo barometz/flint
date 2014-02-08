@@ -14,7 +14,14 @@ namespace flint.Responses
         public void SetPayload( byte[] payload )
         {
             ErrorMessage = null;
-            Load( payload );
+            try
+            {
+                Load( payload );
+            }
+            catch ( Exception ex )
+            {
+                ErrorMessage = ex.Message;
+            }
         }
 
         public void SetError( string message )
@@ -24,6 +31,7 @@ namespace flint.Responses
 
         public void SetError( byte[] errorPayload )
         {
+            //TODO: Validation on the error payload
             /* 
              * Unpack the metadata.  Eight bytes:
              * 0..3 -> integer timestamp

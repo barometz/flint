@@ -1,5 +1,6 @@
 ﻿namespace flint.Responses
 {
+    [Endpoint(Endpoint.PutBytes)]
     internal class PutBytesResponse : ResponseBase
     {
         public byte[] Response { get; private set; }

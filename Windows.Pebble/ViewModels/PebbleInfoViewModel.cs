@@ -99,7 +99,7 @@ namespace Windows.Pebble.ViewModels
             if ( _pebble == null || _pebble.Alive == false )
                 return;
 
-            FirmwareResponse firmwareResponse = await _pebble.GetFirmwareVersionAsync();
+            FirmwareVersionResponse firmwareResponse = await _pebble.GetFirmwareVersionAsync();
             if ( firmwareResponse.Success )
             {
                 Firmware = firmwareResponse.Firmware;

@@ -2,6 +2,7 @@
 
 namespace flint.Responses
 {
+    [Endpoint(Endpoint.Time)]
     public class TimeResponse : ResponseBase
     {
         public DateTime Time { get; private set; }

@@ -2,6 +2,7 @@
 
 namespace flint.Responses
 {
+    [Endpoint(Endpoint.Ping)]
     public class PingResponse : ResponseBase
     {
         public uint Cookie { get; private set; }

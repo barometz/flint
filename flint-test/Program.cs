@@ -85,7 +85,7 @@ namespace flint_test
             // Subscribe to an event for a particular endpoint
             pebble.RegisterCallback<PingResponse>(pingReceived);
 
-            FirmwareResponse firmwareResponse = pebble.GetFirmwareVersionAsync().Result;
+            FirmwareVersionResponse firmwareResponse = pebble.GetFirmwareVersionAsync().Result;
             if (firmwareResponse.Success)
             {
                 Console.WriteLine(firmwareResponse.Firmware);

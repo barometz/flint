@@ -12,7 +12,7 @@ namespace flint
         public string Filename { get; private set; }
         public string Message { get; private set; }
 
-        public LogReceivedEventArgs(Endpoints endPoint, byte[] payload)
+        public LogReceivedEventArgs(Endpoint endPoint, byte[] payload)
             : base(endPoint, payload)
         {
             byte[] metadata = new byte[8];
@@ -51,7 +51,7 @@ namespace flint
         }
 
         public LogReceivedEventArgs(byte[] payload)
-            : this(Endpoints.Logs, payload)
+            : this(Endpoint.Logs, payload)
         {
         }
 

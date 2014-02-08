@@ -106,13 +106,16 @@ namespace flint
             return @string;
         }
 
-        public static uint GetUint32( byte[] bytes, int index )
+        public static uint GetUInt32( byte[] bytes, int index )
         {
-            if ( BitConverter.IsLittleEndian )
-            {
-                Array.Reverse( bytes, index, 4 );
-            }
-            return BitConverter.ToUInt32( bytes, index );
+            byte[] copiedBytes = GetOrderedBytes( bytes, index, sizeof(uint) );
+            return BitConverter.ToUInt32( copiedBytes, 0 );
+        }
+
+        public static ushort GetUInt16( byte[] bytes, int index )
+        {
+            byte[] copiedBytes = GetOrderedBytes( bytes, index, sizeof(ushort) );
+            return BitConverter.ToUInt16( copiedBytes, 0 );
         }
 
         public static byte[] CombineArrays( params byte[][] array )
@@ -126,13 +129,32 @@ namespace flint
 
         public static T GetEnum<T>( object value, T @default = default(T) ) where T : struct
         {
-            var genericType = typeof( T );
-            if ( genericType.IsEnum == false )
-                throw new InvalidOperationException( string.Format( "{0} is not an enum type", genericType.FullName ) );
-            if ( Enum.IsDefined( genericType, Convert.ChangeType( value, Enum.GetUnderlyingType( genericType ) ) ) )
-                return (T)value;
+            var enumType = typeof( T );
+            if ( enumType.IsEnum == false )
+                throw new InvalidOperationException( string.Format( "{0} is not an enum type", enumType.FullName ) );
+            if ( Enum.IsDefined( enumType, Convert.ChangeType( value, Enum.GetUnderlyingType( enumType ) ) ) )
+                return (T)Convert.ChangeType( value, Enum.GetUnderlyingType( enumType ) );
             return @default;
 
+        }
+
+        public static UUID GetUUID( byte[] bytes, int index )
+        {
+            var byteArray = bytes.Skip( index ).Take( 16 ).ToArray();
+            if ( byteArray.Length == 16 )
+                return new UUID( byteArray );
+            return null;
+        }
+
+        public static byte[] GetOrderedBytes( byte[] bytes, int index, int length )
+        {
+            var rv = new byte[length];
+            Array.Copy( bytes, index, rv, 0, length );
+            if ( BitConverter.IsLittleEndian )
+            {
+                Array.Reverse( rv );
+            }
+            return rv;
         }
     }
 }

@@ -10,7 +10,6 @@ namespace flint
     /// </summary>
     internal class PebbleProtocol
     {
-        // TODO: Exception handling
         public event EventHandler<RawMessageReceivedEventArgs> RawMessageReceived = delegate { };
         public event SerialErrorReceivedEventHandler SerialErrorReceived = delegate { };
 

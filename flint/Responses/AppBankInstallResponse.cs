@@ -2,13 +2,14 @@
 
 namespace flint.Responses
 {
+    [Endpoint(Endpoint.AppManager, 2)]
     public class AppbankInstallResponse : ResponseBase
     {
-        public enum MessageType
+        public enum MessageType : byte
         {
-            Available,
-            Removed,
-            Updated
+            Available = 0,
+            Removed = 1,
+            Updated = 2
         }
 
         public MessageType MsgType { get; private set; }
@@ -19,8 +20,8 @@ namespace flint.Responses
             {
                 Array.Reverse(payload, 1, 4);
             }
-            uint result = BitConverter.ToUInt32(payload, 1);
-            MsgType = (MessageType)result; 
+            uint result = Util.GetUInt32(payload, 1);
+            MsgType = Util.GetEnum<MessageType>(result); 
         }
     }
 }
