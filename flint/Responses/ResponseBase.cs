@@ -31,7 +31,12 @@ namespace flint.Responses
 
         public void SetError( byte[] errorPayload )
         {
-            //TODO: Validation on the error payload
+            if (errorPayload == null || errorPayload.Length < 24)
+            {
+                SetError("The error payload is not large enough to be valid");
+                return;
+            }
+
             /* 
              * Unpack the metadata.  Eight bytes:
              * 0..3 -> integer timestamp
@@ -39,15 +44,16 @@ namespace flint.Responses
              * 5    -> Size of the message
              * 6..7 -> Line number (?)
              */
-            if ( BitConverter.IsLittleEndian )
-                Array.Reverse( errorPayload, 0, 8 );
 
-            short lineNumber = BitConverter.ToInt16( errorPayload, 0 );
-            byte messageSize = errorPayload[2];
-            byte level = errorPayload[3];
-            var timestamp = Util.GetDateTimeFromTimestamp( BitConverter.ToInt32( errorPayload, 4 ) );
-            var fileName = Util.GetString( errorPayload, 8, 16 );
-            var message = Util.GetString( errorPayload, 24, messageSize );
+            DateTime timestamp = Util.GetDateTimeFromTimestamp( Util.GetUInt32( errorPayload, 0 ) );
+            byte level = errorPayload[4];
+            byte messageSize = errorPayload[5];
+            ushort lineNumber = Util.GetUInt16( errorPayload, 6 );
+
+            // Now to extract the actual data
+            string fileName = Util.GetString( errorPayload, 8, 16 );
+            string message = Util.GetString( errorPayload, 24, messageSize );
+
 
             ErrorDetails = new ErrorDetails
                                {
@@ -74,7 +80,7 @@ namespace flint.Responses
     {
         public DateTime Timestamp { get; set; }
         public byte Level { get; set; }
-        public short LineNumber { get; set; }
+        public ushort LineNumber { get; set; }
         public string Filename { get; set; }
         public string Message { get; set; }
 

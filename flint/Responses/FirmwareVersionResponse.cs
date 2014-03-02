@@ -17,6 +17,7 @@ namespace flint.Responses
 
         private static FirmwareVersion ParseVersion( byte[] data )
         {
+            //TODO: data validation
             /*
              * The layout of the version info is:
              *  0: 3 Timestamp (int32)
@@ -26,13 +27,11 @@ namespace flint.Responses
              * 45:   HW Platform (byte)
              * 46:   Metadata version (byte)
              */
-            if ( BitConverter.IsLittleEndian )
-                Array.Reverse( data, 0, 4 );
 
-            DateTime timestamp = Util.GetDateTimeFromTimestamp( BitConverter.ToInt32( data, 0 ) );
+            DateTime timestamp = Util.GetDateTimeFromTimestamp( Util.GetUInt32( data, 0 ) );
             string version = Util.GetString( data, 4, 32 );
             string commit = Util.GetString( data, 36, 8 );
-            Boolean isRecovery = BitConverter.ToBoolean( data, 44 );
+            bool isRecovery = BitConverter.ToBoolean( data, 44 );
             byte hardwarePlatform = data[45];
             byte metadataVersion = data[46];
             return new FirmwareVersion( timestamp, version, commit, isRecovery, hardwarePlatform, metadataVersion );

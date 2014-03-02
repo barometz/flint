@@ -6,7 +6,7 @@ namespace flint.Responses
     internal class EndpointAttribute : Attribute
     {
         public Endpoint Endpoint { get; set; }
-        public byte PayloadType { get; set; } 
+        public byte? PayloadType { get; set; }
 
         public EndpointAttribute()
         { }
@@ -16,7 +16,7 @@ namespace flint.Responses
             Endpoint = endpoint;
         }
 
-        public EndpointAttribute( Endpoint endpoint , byte payloadType)
+        public EndpointAttribute( Endpoint endpoint, byte payloadType )
         {
             Endpoint = endpoint;
             PayloadType = payloadType;
@@ -24,7 +24,9 @@ namespace flint.Responses
 
         public Func<byte[], bool> GetPredicate()
         {
-            return bytes => bytes != null && bytes.Length > 0 && bytes[0] == PayloadType;
+            if ( PayloadType != null )
+                return bytes => bytes != null && bytes.Length > 0 && bytes[0] == PayloadType;
+            return null;
         }
     }
 }

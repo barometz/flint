@@ -45,9 +45,8 @@ namespace flint
                 return _PebbleProt.Port;
             }
         }
-        public Boolean Alive { get; private set; }
-        // Time in ms to wait before considering the recurring ping to be dead
-        public int PingTimeout { get; set; }
+        public bool Alive { get; private set; }
+        public TimeSpan ResponseTimeout { get; set; }
 
         private readonly PebbleProtocol _PebbleProt;
         private readonly ResponseManager _responseManager = new ResponseManager();
@@ -61,8 +60,7 @@ namespace flint
         /// Nothing explodes when it's incorrect, it's merely used for identification.</param>
         public Pebble( string port, string pebbleId )
         {
-            Alive = false;
-            PingTimeout = 10000;
+            ResponseTimeout = TimeSpan.FromSeconds(5);
             PebbleID = pebbleId;
 
             _callbackHandlers = new Dictionary<Type, List<CallbackContainer>>();
@@ -70,12 +68,6 @@ namespace flint
             _PebbleProt = new PebbleProtocol( port );
             _PebbleProt.RawMessageReceived += RawMessageReceived;
 
-            //This is received immediately after connecting, and we must respond to it
-            RegisterCallback<PhoneVersionResponse>( PhoneVersionReceived );
-            //TODO: when are these called?
-            //RegisterEndpointCallback( Endpoints.PhoneVersion, PhoneVersionReceived );
-            //RegisterEndpointCallback( Endpoints.Version, VersionReceived );
-            //RegisterEndpointCallback( Endpoints.AppManager, AppbankStatusResponseReceived );
         }
 
         /// <summary> Returns one of the paired Pebbles, or a specific one 
@@ -157,10 +149,37 @@ namespace flint
         /// <summary> Connect with the Pebble. 
         /// </summary>
         /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
-        public void Connect()
+        public async Task ConnectAsync()
         {
-            _PebbleProt.Connect();
-            Alive = true;
+            PhoneVersionResponse response;
+            //PhoneVersionResponse is received immediately after connecting, and we must respond to it before making any other calls
+            using ( var responseTransaction = _responseManager.GetTransaction<PhoneVersionResponse>() )
+            {
+                _PebbleProt.Connect();
+
+                response = responseTransaction.AwaitResponse( ResponseTimeout );
+            }
+
+            if ( response != null )
+            {
+                byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
+                byte[] session = BitConverter.GetBytes( _SessionCaps );
+                byte[] remote = BitConverter.GetBytes( _RemoteCaps );
+                if ( BitConverter.IsLittleEndian )
+                {
+                    Array.Reverse( session );
+                    Array.Reverse( remote );
+                }
+
+                var msg = new byte[0];
+                msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
+                await SendMessageNoResponseAsync( Endpoint.PhoneVersion, msg );
+                Alive = true;
+            }
+            else
+            {
+                Disconnect();
+            }
         }
 
         /// <summary>
@@ -380,7 +399,7 @@ namespace flint
         /// <returns></returns>
         public async Task<AppbankResponse> GetAppbankContentsAsync()
         {
-            return await SendMessageAsync<AppbankResponse>( Endpoint.AppManager, new byte[] { 1 }, x => x.ResponseType == AppbankResponse.AppbankResponseType.Apps );
+            return await SendMessageAsync<AppbankResponse>( Endpoint.AppManager, new byte[] { 1 } );
         }
 
         /// <summary>
@@ -399,7 +418,7 @@ namespace flint
             return await SendMessageAsync<AppbankInstallResponse>( Endpoint.AppManager, msg );
         }
 
-        private async Task<T> SendMessageAsync<T>( Endpoint endpoint, byte[] payload, Func<T, bool> responseMatchPredicate = null )
+        private async Task<T> SendMessageAsync<T>( Endpoint endpoint, byte[] payload )
             where T : class, IResponse, new()
         {
             return await Task.Run( () =>
@@ -411,8 +430,7 @@ namespace flint
                         using ( var responseTransaction = _responseManager.GetTransaction<T>() )
                         {
                             _PebbleProt.SendMessage( (ushort)endpoint, payload );
-                            //TODO: move this timeout to a property where it can be configured
-                            return responseTransaction.AwaitResponse(TimeSpan.FromSeconds(5));
+                            return responseTransaction.AwaitResponse( ResponseTimeout );
                         }
                     }
                 }
@@ -436,10 +454,19 @@ namespace flint
         {
             return Task.Run( () =>
             {
-                lock ( _PebbleProt )
+                try
                 {
-                    _PebbleProt.SendMessage( (ushort)endpoint, payload );
+                    lock ( _PebbleProt )
+                    {
+                        _PebbleProt.SendMessage( (ushort)endpoint, payload );
+                    }
                 }
+                catch ( TimeoutException )
+                {
+                    Disconnect();
+                }
+                catch ( Exception )
+                { }
             } );
         }
 
@@ -447,7 +474,7 @@ namespace flint
         {
             Debug.WriteLine( "Received Message for Endpoint: {0}", (Endpoint)e.Endpoint );
 
-            IResponse response = _responseManager.HandleResponse((Endpoint) e.Endpoint, e.Payload);
+            IResponse response = _responseManager.HandleResponse( (Endpoint)e.Endpoint, e.Payload );
 
             if ( response != null )
             {
@@ -459,22 +486,6 @@ namespace flint
                         callback.Invoke( response );
                 }
             }
-        }
-
-        private async void PhoneVersionReceived( PhoneVersionResponse response )
-        {
-            byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
-            byte[] session = BitConverter.GetBytes( _SessionCaps );
-            byte[] remote = BitConverter.GetBytes( _RemoteCaps );
-            if ( BitConverter.IsLittleEndian )
-            {
-                Array.Reverse( session );
-                Array.Reverse( remote );
-            }
-
-            var msg = new byte[0];
-            msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
-            await SendMessageNoResponseAsync( Endpoint.PhoneVersion, msg );
         }
 
         public override string ToString()

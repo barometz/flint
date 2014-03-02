@@ -17,7 +17,7 @@ namespace Windows.Pebble.ViewModels
 
         public PebbleMediaViewModel()
         {
-            _setNowPlayingCommand = new RelayCommand(OnSetNowPlaying);
+            _setNowPlayingCommand = new RelayCommand( OnSetNowPlaying );
             _commandsReceived = new BindingList<string>();
         }
 
@@ -35,26 +35,26 @@ namespace Windows.Pebble.ViewModels
         public string Artist
         {
             get { return _Artist; }
-            set { Set(() => Artist, ref _Artist, value); }
+            set { Set( () => Artist, ref _Artist, value ); }
         }
 
         private string _Album;
         public string Album
         {
             get { return _Album; }
-            set { Set(() => Album, ref _Album, value); }
+            set { Set( () => Album, ref _Album, value ); }
         }
 
         private string _Track;
         public string Track
         {
             get { return _Track; }
-            set { Set(() => Track, ref _Track, value); }
+            set { Set( () => Track, ref _Track, value ); }
         }
 
         protected override void OnPebbleConnected( PebbleConnected pebbleConnected )
         {
-            base.OnPebbleConnected(pebbleConnected);
+            base.OnPebbleConnected( pebbleConnected );
 
             _pebble.RegisterCallback<MusicControlResponse>( OnMusicControlReceived );
         }
@@ -63,35 +63,38 @@ namespace Windows.Pebble.ViewModels
         {
             _pebble.UnregisterCallback<MusicControlResponse>( OnMusicControlReceived );
 
-            base.OnPebbleDisconnected(pebbleDisconnected);
+            base.OnPebbleDisconnected( pebbleDisconnected );
         }
 
         private void OnMusicControlReceived( MusicControlResponse response )
         {
-            switch ( response.Command )
+            if ( response.Success )
             {
-                case MediaControl.PlayPause:
-                    NativeMethods.SendMessage( AppCommandCode.MediaPlayPause );
-                    AddCommandReceived( "Play/Pause" );
-                    break;
-                case MediaControl.Next:
-                    NativeMethods.SendMessage( AppCommandCode.MediaNextTrack );
-                    AddCommandReceived( "Next Track" );
-                    break;
-                case MediaControl.Previous:
-                    NativeMethods.SendMessage( AppCommandCode.MediaPreviousTrack );
-                    AddCommandReceived( "Previous Track" );
-                    break;
-                default:
-                    AddCommandReceived( response.Command.ToString() );
-                    break;
+                switch ( response.Command )
+                {
+                    case MediaControl.PlayPause:
+                        NativeMethods.SendMessage( AppCommandCode.MediaPlayPause );
+                        AddCommandReceived( "Play/Pause" );
+                        break;
+                    case MediaControl.Next:
+                        NativeMethods.SendMessage( AppCommandCode.MediaNextTrack );
+                        AddCommandReceived( "Next Track" );
+                        break;
+                    case MediaControl.Previous:
+                        NativeMethods.SendMessage( AppCommandCode.MediaPreviousTrack );
+                        AddCommandReceived( "Previous Track" );
+                        break;
+                    default:
+                        AddCommandReceived( response.Command.ToString() );
+                        break;
+                }
             }
         }
 
         private void AddCommandReceived( string command )
         {
             var dispatcher = Application.Current.Dispatcher;
-            if ( dispatcher.CheckAccess() == false)
+            if ( dispatcher.CheckAccess() == false )
                 dispatcher.Invoke( () => _commandsReceived.Add( command ) );
             else
                 _commandsReceived.Add( command );
@@ -100,7 +103,7 @@ namespace Windows.Pebble.ViewModels
 
         private async void OnSetNowPlaying()
         {
-            await _pebble.SetNowPlayingAsync(Artist ?? "", Album ?? "", Track ?? "");
+            await _pebble.SetNowPlayingAsync( Artist ?? "", Album ?? "", Track ?? "" );
         }
     }
 }

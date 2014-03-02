@@ -68,7 +68,7 @@ namespace Windows.Pebble.ViewModels
         private async void OnRemoveApp( AppBank.App app )
         {
             if ( _pebble.Alive == false )
-                _pebble.Connect();
+                return;
 
             await _pebble.RemoveAppAsync( app );
             await LoadAppsAsync();
@@ -90,7 +90,7 @@ namespace Windows.Pebble.ViewModels
                 var bundle = new PebbleBundle( openDialog.FileName );
 
                 if ( _pebble.Alive == false )
-                    _pebble.Connect();
+                    return;
                 await _pebble.InstallAppAsync( bundle );
                 await LoadAppsAsync();
             }

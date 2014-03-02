@@ -54,7 +54,7 @@ namespace flint_test
             
             try
             {
-                pebble.Connect();
+                pebble.ConnectAsync().Wait();
             }
             catch (System.IO.IOException e)
             {

@@ -49,7 +49,7 @@ namespace flint
         /// </remarks>
         /// <param name="ts"></param>
         /// <returns></returns>
-        public static DateTime GetDateTimeFromTimestamp( Int32 ts )
+        public static DateTime GetDateTimeFromTimestamp( uint ts )
         {
             return new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Unspecified ).AddSeconds( ts );
         }

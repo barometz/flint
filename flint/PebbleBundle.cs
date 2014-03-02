@@ -29,7 +29,7 @@ namespace flint
 
                 /// <summary> The time at which the application binary was created. (?) </summary>
                 [DataMember( Name = "timestamp", IsRequired = true )]
-                public int Timestamp { get; private set; }
+                public uint Timestamp { get; private set; }
                 /// <summary> The time at which the application binary was created. (?) </summary>
                 public DateTime TimestampDT { get { return Util.GetDateTimeFromTimestamp( Timestamp ); } }
 
@@ -52,7 +52,7 @@ namespace flint
 
                 /// <summary> The time at which the firmware binary was created. (?) </summary>
                 [DataMember( Name = "timestamp", IsRequired = true )]
-                public int Timestamp { get; private set; }
+                public uint Timestamp { get; private set; }
                 /// <summary> The time at which the firmware binary was created. (?) </summary>
                 public DateTime TimestampDT { get { return Util.GetDateTimeFromTimestamp( Timestamp ); } }
 
@@ -85,7 +85,7 @@ namespace flint
 
                 /// <summary> The time at which the resources package was created. (?) </summary>
                 [DataMember( Name = "timestamp", IsRequired = true )]
-                public int Timestamp { get; private set; }
+                public uint Timestamp { get; private set; }
                 /// <summary> The time at which the resources package was created. (?) </summary>
                 public DateTime TimestampDT { get { return Util.GetDateTimeFromTimestamp( Timestamp ); } }
 
@@ -106,7 +106,7 @@ namespace flint
             public int ManifestVersion { get; private set; }
 
             [DataMember( Name = "generatedAt", IsRequired = true )]
-            public int GeneratedAt { get; private set; }
+            public uint GeneratedAt { get; private set; }
 
             /// <summary> The date and time at which this bundle was generated. </summary>
             public DateTime GeneratedAtDT { get { return Util.GetDateTimeFromTimestamp( GeneratedAt ); } }

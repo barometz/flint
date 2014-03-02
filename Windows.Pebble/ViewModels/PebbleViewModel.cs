@@ -37,7 +37,7 @@ namespace Windows.Pebble.ViewModels
             get { return _toggleConnectionCommand; }
         }
 
-        private void OnToggleConnect( )
+        private async void OnToggleConnect( )
         {
             if (IsConnected)
             {
@@ -46,7 +46,7 @@ namespace Windows.Pebble.ViewModels
             }
             else
             {
-                _pebble.Connect();
+                await _pebble.ConnectAsync();
                 MessengerInstance.Send(new PebbleConnected(_pebble));
             }
             IsConnected = !IsConnected;

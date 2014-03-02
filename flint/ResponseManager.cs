@@ -36,39 +36,52 @@ namespace flint
             }
         }
 
-
+        private readonly object _pendingTransactionSyncLock = new object();
         private IResponseSetter _pendingTransaction;
-
         public IResponseTransaction<T> GetTransaction<T>() where T : class, IResponse, new()
         {
-            var rv = new ResponseTransaction<T>( this );
-            _pendingTransaction = rv;
-            return rv;
+            lock (_pendingTransactionSyncLock)
+            {
+                if (_pendingTransaction != null)
+                    throw new InvalidOperationException();
+                var rv = new ResponseTransaction<T>(this);
+                _pendingTransaction = rv;
+                return rv;
+            }
         }
 
         public IResponse HandleResponse( Endpoint endpoint, byte[] payload )
         {
-            //TODO: might be better to create a logs response...
-            if ( endpoint == Endpoint.Logs && _pendingTransaction != null )
+            lock (_pendingTransactionSyncLock)
             {
-                _pendingTransaction.SetError(payload);
-                return null;
-            }
+                //TODO: might be better to create a logs response...
+                if (endpoint == Endpoint.Logs && _pendingTransaction != null)
+                {
+                    _pendingTransaction.SetError(payload);
+                    return null;
+                }
 
-            List<ResponseMatch> responseMatches;
-            if ( _endpointToResponseMap.TryGetValue( endpoint, out responseMatches ) )
-            {
-                IResponse rv = responseMatches.Select( x => x.GetResponse( payload ) ).FirstOrDefault( x => x != null );
-                if ( rv != null && _pendingTransaction != null )
-                    _pendingTransaction.SetPayload( payload );
-                //TODO: Consider creating a generic response
+                IResponse rv = null;
+                List<ResponseMatch> responseMatches;
+                if (_endpointToResponseMap.TryGetValue(endpoint, out responseMatches))
+                {
+                    rv = responseMatches.Select(x => x.GetResponse(payload)).FirstOrDefault(x => x != null);
+                    if (rv != null)
+                    {
+                        if ( _pendingTransaction != null && rv.GetType() == _pendingTransaction.ResponseType )
+                            _pendingTransaction.SetPayload( payload );
+                        rv.SetPayload(payload);
+                    }
+                    
+                    //TODO: generic response or event for unhandled responses
 #if DEBUG
-                //Using this to find responses that do now have classes to handle them
-                if ( rv == null && System.Diagnostics.Debugger.IsAttached )
-                    System.Diagnostics.Debugger.Break();
+                    //Using this to find responses that do now have classes to handle them
+                    if (rv == null && System.Diagnostics.Debugger.IsAttached)
+                        System.Diagnostics.Debugger.Break();
 #endif
+                }
+                return rv;
             }
-            return null;
         }
 
         private class ResponseMatch
@@ -95,6 +108,7 @@ namespace flint
         
         private interface IResponseSetter
         {
+            Type ResponseType { get; }
             void SetPayload( byte[] payload );
             void SetError( byte[] errorPayload );
         }
@@ -115,15 +129,23 @@ namespace flint
             
             public void Dispose()
             {
-                if ( ReferenceEquals( _manager._pendingTransaction, this ) )
-                    _manager._pendingTransaction = null;
+                lock (_manager._pendingTransactionSyncLock)
+                {
+                    if (ReferenceEquals(_manager._pendingTransaction, this))
+                        _manager._pendingTransaction = null;
+                }
             }
 
             public T AwaitResponse( TimeSpan timeout )
             {
-                if (_resetEvent.WaitOne(timeout))
+                if (_resetEvent.WaitOne(timeout) == false)
                     _response.SetError( "Timed out waiting for a response" );
                 return _response;
+            }
+
+            public Type ResponseType
+            {
+                get { return typeof (T); }
             }
 
             void IResponseSetter.SetPayload( byte[] payload )
