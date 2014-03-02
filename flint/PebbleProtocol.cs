@@ -13,7 +13,10 @@ namespace flint
         public event EventHandler<RawMessageReceivedEventArgs> RawMessageReceived = delegate { };
         public event SerialErrorReceivedEventHandler SerialErrorReceived = delegate { };
 
-        public string Port { get; private set; }
+        public string Port 
+        {
+            get { return _SerialPort.PortName; }
+        }
 
         private enum WaitingStates
         {
@@ -30,7 +33,6 @@ namespace flint
         /// <param name="port"></param>
         public PebbleProtocol( string port )
         {
-            Port = port;
             _SerialPort = new SerialPort( port, 19200 );
             _SerialPort.ReadTimeout = 500;
             _SerialPort.WriteTimeout = 500;
@@ -66,13 +68,8 @@ namespace flint
             }
 
             UInt16 length = Convert.ToUInt16( payload.Length );
-            byte[] payloadSize = BitConverter.GetBytes( length );
-            byte[] _endPoint = BitConverter.GetBytes( endpoint );
-            if ( BitConverter.IsLittleEndian )
-            {
-                Array.Reverse( payloadSize );
-                Array.Reverse( _endPoint );
-            }
+            byte[] payloadSize = Util.GetBytes( length );
+            byte[] endPoint = Util.GetBytes( endpoint );
             
             //Debug.WriteLine( "Sending message.." );
             //Debug.WriteLine( "\tPLS: " + BitConverter.ToString( payloadSize ) );
@@ -80,13 +77,8 @@ namespace flint
             //Debug.WriteLine( "\tPL:  " + BitConverter.ToString( payload ) );
 
             _SerialPort.Write( payloadSize, 0, 2 );
-            _SerialPort.Write( _endPoint, 0, 2 );
+            _SerialPort.Write( endPoint, 0, 2 );
             _SerialPort.Write( payload, 0, length );
-        }
-
-        private void RaiseRawMessageReceived( UInt16 endpoint, byte[] payload )
-        {
-            RawMessageReceived( this, new RawMessageReceivedEventArgs( endpoint, payload ) );
         }
 
         /// <summary> Serial error handler.  Passes stuff on to the next subscriber.
@@ -155,7 +147,7 @@ namespace flint
                         // All of the payload's been received, so read it.
                         var buffer = new byte[_CurrentPayloadSize];
                         _SerialPort.Read( buffer, 0, _CurrentPayloadSize );
-                        RaiseRawMessageReceived( _CurrentEndpoint, buffer );
+                        RawMessageReceived( this, new RawMessageReceivedEventArgs( _CurrentEndpoint, buffer ) );
                         // Reset state
                         _WaitingState = WaitingStates.NewMessage;
                         _CurrentEndpoint = 0;
@@ -164,8 +156,7 @@ namespace flint
                     }
                     break;
             }
-            // If this hasn't returned yet there wasn't anything interesting to
-            // read.
+            // If this hasn't returned yet there wasn't anything interesting to read.
             return false;
         }
     }

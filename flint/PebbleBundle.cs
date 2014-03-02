@@ -87,7 +87,7 @@ namespace flint
                 [DataMember( Name = "timestamp", IsRequired = true )]
                 public uint Timestamp { get; private set; }
                 /// <summary> The time at which the resources package was created. (?) </summary>
-                public DateTime TimestampDT { get { return Util.GetDateTimeFromTimestamp( Timestamp ); } }
+                public DateTime TimestampDateTime { get { return Util.GetDateTimeFromTimestamp( Timestamp ); } }
 
                 /// <summary> The CRC of the resources package. </summary>
                 [DataMember( Name = "crc", IsRequired = true )]
@@ -109,7 +109,7 @@ namespace flint
             public uint GeneratedAt { get; private set; }
 
             /// <summary> The date and time at which this bundle was generated. </summary>
-            public DateTime GeneratedAtDT { get { return Util.GetDateTimeFromTimestamp( GeneratedAt ); } }
+            public DateTime GeneratedAtDateTime { get { return Util.GetDateTimeFromTimestamp( GeneratedAt ); } }
 
             /// <summary> Name of the machine on which this bundle was generated. </summary>
             [DataMember( Name = "generatedBy", IsRequired = true )]

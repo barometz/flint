@@ -54,7 +54,7 @@ namespace flint
         {
             lock (_pendingTransactionSyncLock)
             {
-                //TODO: might be better to create a logs response...
+                //TODO: might be better to create a logs response type...
                 if (endpoint == Endpoint.Logs && _pendingTransaction != null)
                 {
                     _pendingTransaction.SetError(payload);

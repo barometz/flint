@@ -1,5 +1,4 @@
-﻿using System;
-
+﻿
 namespace flint.Responses
 {
     [Endpoint(Endpoint.AppManager, 2)]
@@ -16,10 +15,6 @@ namespace flint.Responses
 
         protected override void Load( byte[] payload )
         {
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(payload, 1, 4);
-            }
             uint result = Util.GetUInt32(payload, 1);
             MsgType = Util.GetEnum<MessageType>(result); 
         }

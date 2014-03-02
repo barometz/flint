@@ -60,7 +60,7 @@ namespace flint
         /// Nothing explodes when it's incorrect, it's merely used for identification.</param>
         public Pebble( string port, string pebbleId )
         {
-            ResponseTimeout = TimeSpan.FromSeconds(5);
+            ResponseTimeout = TimeSpan.FromSeconds( 5 );
             PebbleID = pebbleId;
 
             _callbackHandlers = new Dictionary<Type, List<CallbackContainer>>();
@@ -163,16 +163,10 @@ namespace flint
             if ( response != null )
             {
                 byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
-                byte[] session = BitConverter.GetBytes( _SessionCaps );
-                byte[] remote = BitConverter.GetBytes( _RemoteCaps );
-                if ( BitConverter.IsLittleEndian )
-                {
-                    Array.Reverse( session );
-                    Array.Reverse( remote );
-                }
+                byte[] session = Util.GetBytes( _SessionCaps );
+                byte[] remote = Util.GetBytes( _RemoteCaps );
 
-                var msg = new byte[0];
-                msg = msg.Concat( prefix ).Concat( session ).Concat( remote ).ToArray();
+                var msg = Util.CombineArrays( prefix, session, remote );
                 await SendMessageNoResponseAsync( Endpoint.PhoneVersion, msg );
                 Alive = true;
             }
@@ -225,7 +219,7 @@ namespace flint
         public async Task<PingResponse> PingAsync( uint pingData = 0 )
         {
             // No need to worry about endianness as it's sent back byte for byte anyway.
-            byte[] data = Util.CombineArrays( new byte[] { 0 }, BitConverter.GetBytes( pingData ) );
+            byte[] data = Util.CombineArrays( new byte[] { 0 }, Util.GetBytes( pingData ) );
 
             return await SendMessageAsync<PingResponse>( Endpoint.Ping, data );
         }

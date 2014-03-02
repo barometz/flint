@@ -47,11 +47,11 @@ namespace flint
         /// unclear how either side deals with leap seconds.  For basic usage
         /// this should be plenty, though.
         /// </remarks>
-        /// <param name="ts"></param>
+        /// <param name="timestamp"></param>
         /// <returns></returns>
-        public static DateTime GetDateTimeFromTimestamp( uint ts )
+        public static DateTime GetDateTimeFromTimestamp( uint timestamp )
         {
-            return new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Unspecified ).AddSeconds( ts );
+            return new DateTime( 1970, 1, 1, 0, 0, 0, DateTimeKind.Unspecified ).AddSeconds( timestamp );
         }
 
         public static int GetTimestampFromDateTime( DateTime dateTime )
@@ -96,6 +96,14 @@ namespace flint
             return bytes;
         }
 
+        public static byte[] GetBytes( ushort value )
+        {
+            var bytes = BitConverter.GetBytes( value );
+            if ( BitConverter.IsLittleEndian )
+                Array.Reverse( bytes );
+            return bytes;
+        }
+
         public static string GetString( byte[] bytes, int index, int count )
         {
             string @string = Encoding.UTF8.GetString( bytes, index, count );
@@ -108,13 +116,13 @@ namespace flint
 
         public static uint GetUInt32( byte[] bytes, int index )
         {
-            byte[] copiedBytes = GetOrderedBytes( bytes, index, sizeof(uint) );
+            byte[] copiedBytes = GetOrderedBytes( bytes, index, sizeof( uint ) );
             return BitConverter.ToUInt32( copiedBytes, 0 );
         }
 
         public static ushort GetUInt16( byte[] bytes, int index )
         {
-            byte[] copiedBytes = GetOrderedBytes( bytes, index, sizeof(ushort) );
+            byte[] copiedBytes = GetOrderedBytes( bytes, index, sizeof( ushort ) );
             return BitConverter.ToUInt16( copiedBytes, 0 );
         }
 
@@ -146,7 +154,7 @@ namespace flint
             return null;
         }
 
-        public static byte[] GetOrderedBytes( byte[] bytes, int index, int length )
+        private static byte[] GetOrderedBytes( byte[] bytes, int index, int length )
         {
             var rv = new byte[length];
             Array.Copy( bytes, index, rv, 0, length );

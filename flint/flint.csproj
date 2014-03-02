@@ -76,7 +76,6 @@
     <Compile Include="Crc32.cs" />
     <Compile Include="FirmwareVersion.cs" />
     <Compile Include="Responses\IResponse.cs" />
-    <Compile Include="MessageReceivedEventArgs.cs" />
     <Compile Include="Pebble.cs" />
     <Compile Include="PebbleBundle.cs" />
     <Compile Include="PebbleException.cs" />
