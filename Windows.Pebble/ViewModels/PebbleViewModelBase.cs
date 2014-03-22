@@ -5,7 +5,7 @@ namespace Windows.Pebble.ViewModels
 {
     public class PebbleViewModelBase : ViewModelBase
     {
-        protected flint.Pebble _pebble;
+        protected Flint.Core.Pebble _pebble;
 
         protected PebbleViewModelBase()
         {

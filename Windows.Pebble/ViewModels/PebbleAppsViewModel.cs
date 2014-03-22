@@ -2,23 +2,23 @@
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
+using Flint.Core;
 using GalaSoft.MvvmLight.Command;
 using Microsoft.Win32;
 using Windows.Pebble.Messages;
-using flint;
 
 namespace Windows.Pebble.ViewModels
 {
     public class PebbleAppsViewModel : PebbleViewModelBase
     {
-        private readonly BindingList<AppBank.App> _apps = new BindingList<AppBank.App>();
+        private readonly BindingList<Flint.Core.App> _apps = new BindingList<Flint.Core.App>();
 
-        private readonly RelayCommand<AppBank.App> _removeAppCommand;
+        private readonly RelayCommand<Flint.Core.App> _removeAppCommand;
         private readonly RelayCommand _installAppCommand;
 
         public PebbleAppsViewModel()
         {
-            _removeAppCommand = new RelayCommand<AppBank.App>( OnRemoveApp );
+            _removeAppCommand = new RelayCommand<Flint.Core.App>( OnRemoveApp );
             _installAppCommand = new RelayCommand( OnInstallApp );
         }
 
@@ -65,7 +65,7 @@ namespace Windows.Pebble.ViewModels
             Loading = false;
         }
 
-        private async void OnRemoveApp( AppBank.App app )
+        private async void OnRemoveApp( Flint.Core.App app )
         {
             if ( _pebble.Alive == false )
                 return;
@@ -87,7 +87,7 @@ namespace Windows.Pebble.ViewModels
             };
             if ( openDialog.ShowDialog() == true )
             {
-                var bundle = new PebbleBundle( openDialog.FileName );
+                var bundle = new PebbleBundle( openDialog.OpenFile() );
 
                 if ( _pebble.Alive == false )
                     return;

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Flint.Core.Dependencies;
 
 namespace Flint.Core
 {
@@ -13,26 +12,26 @@ namespace Flint.Core
     /// </summary>
     internal class PebbleProtocol
     {
-        private readonly IBluetoothPort _BlueToothPort;
+        private readonly IBluetoothConnection _blueToothConnection;
         private readonly List<byte> _byteStream = new List<byte>();
         private ushort _CurrentEndpoint;
         private ushort _CurrentPayloadSize;
         private WaitingStates _WaitingState;
 
         /// <summary> Create a new Pebble connection </summary>
-        /// <param name="port"></param>
-        public PebbleProtocol( IBluetoothPort port )
+        /// <param name="connection"></param>
+        public PebbleProtocol( IBluetoothConnection connection )
         {
-            _BlueToothPort = port;
+            _blueToothConnection = connection;
 
-            _BlueToothPort.DataReceived += serialPortDataReceived;
+            _blueToothConnection.DataReceived += serialPortDataReceived;
             //TODO: Push this on to the clients.... do we even care if there is an error?
             //_BlueToothPort.ErrorReceived += serialPortErrorReceived;
         }
 
-        public IBluetoothPort Port
+        public IBluetoothConnection Connection
         {
-            get { return _BlueToothPort; }
+            get { return _blueToothConnection; }
         }
 
         public event EventHandler<RawMessageReceivedEventArgs> RawMessageReceived = delegate { };
@@ -41,12 +40,12 @@ namespace Flint.Core
         /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
         public void Connect()
         {
-            _BlueToothPort.Open();
+            _blueToothConnection.Open();
         }
 
         public void Close()
         {
-            _BlueToothPort.Close();
+            _blueToothConnection.Close();
         }
 
         /// <summary>
@@ -73,7 +72,7 @@ namespace Flint.Core
             //Debug.WriteLine( "\tEP:  " + BitConverter.ToString( _endPoint ) );
             //Debug.WriteLine( "\tPL:  " + BitConverter.ToString( payload ) );
 
-            _BlueToothPort.Write(Util.CombineArrays(payloadSize, endPoint, payload));
+            _blueToothConnection.Write(Util.CombineArrays(payloadSize, endPoint, payload));
         }
         
         private void serialPortDataReceived( object sender, BytesReceivedEventArgs e )

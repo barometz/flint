@@ -4,15 +4,15 @@ namespace Windows.Pebble.Messages
 {
     public class PebbleDisconnected
     {
-        private readonly flint.Pebble _pebble;
+        private readonly Flint.Core.Pebble _pebble;
 
-        public PebbleDisconnected( flint.Pebble pebble )
+        public PebbleDisconnected( Flint.Core.Pebble pebble )
         {
             if (pebble == null) throw new ArgumentNullException("pebble");
             _pebble = pebble;
         }
 
-        public flint.Pebble Pebble
+        public Flint.Core.Pebble Pebble
         {
             get { return _pebble; }
         }

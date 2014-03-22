@@ -1,4 +1,4 @@
-﻿using flint.Responses;
+﻿using Flint.Core.Responses;
 using GalaSoft.MvvmLight.Command;
 using System.Windows.Input;
 

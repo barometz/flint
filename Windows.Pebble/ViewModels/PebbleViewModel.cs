@@ -10,9 +10,9 @@ namespace Windows.Pebble.ViewModels
     {
         private readonly RelayCommand _toggleConnectionCommand;
 
-        private readonly flint.Pebble _pebble;
+        private readonly Flint.Core.Pebble _pebble;
 
-        public PebbleViewModel( flint.Pebble pebble )
+        public PebbleViewModel( Flint.Core.Pebble pebble )
         {
             if ( pebble == null ) throw new ArgumentNullException( "pebble" );
             _pebble = pebble;

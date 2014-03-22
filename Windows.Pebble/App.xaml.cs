@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Interop;
-using System.Windows.Navigation;
+using Flint.Core;
 
 namespace Windows.Pebble
 {
@@ -11,7 +11,13 @@ namespace Windows.Pebble
     public partial class App
     {
         public static IntPtr MainWindowHandle { get; private set; }
-        
+
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            Dependencies.RegisterZipImplementation(() => new Zip.Zip());
+            base.OnStartup(e);
+        }
+
         protected override void OnActivated( EventArgs e )
         {
             base.OnActivated( e );

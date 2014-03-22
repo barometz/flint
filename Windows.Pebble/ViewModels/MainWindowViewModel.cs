@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Windows.Pebble.Bluetooth;
 using GalaSoft.MvvmLight;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,7 +15,7 @@ namespace Windows.Pebble.ViewModels
         {
             if ( IsInDesignMode == false )
             {
-                _pebbleDevices = new List<PebbleViewModel>( flint.Pebble.DetectPebbles().Select( x => new PebbleViewModel( x ) ) );
+                _pebbleDevices = new List<PebbleViewModel>( PebbleScanner.DetectPebbles().Select( x => new PebbleViewModel( x ) ) );
             }
         }
 

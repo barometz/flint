@@ -4,12 +4,13 @@ namespace Flint.Core
 {
     public class UUID
     {
+        public const int SIZE = 16;
         private readonly byte[] _data;
 
         public UUID( byte[] data )
         {
             if (data == null) throw new ArgumentNullException("data");
-            if (data.Length != 16) throw new ArgumentException("UUID data must be 16 bytes", "data");
+            if (data.Length != SIZE) throw new ArgumentException(string.Format("UUID data must be {0} bytes", SIZE), "data");
 
             _data = data;
         }

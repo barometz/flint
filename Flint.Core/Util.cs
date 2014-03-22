@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Text;
+using Flint.Core.Serialization;
 
 namespace Flint.Core
 {
@@ -10,8 +10,7 @@ namespace Flint.Core
     {
         public static T ReadStruct<T>( Stream stream ) where T : struct
         {
-            var serializer = new DataContractSerializer( typeof( T ) );
-            return (T)serializer.ReadObject( stream );
+            return BinarySerializer.ReadObject<T>(stream);
         }
 
         /// <summary>
@@ -88,7 +87,7 @@ namespace Flint.Core
             return @string;
         }
 
-        public static uint GetUInt32( byte[] bytes, int index )
+        public static uint GetUInt32( byte[] bytes, int index = 0)
         {
             byte[] copiedBytes = GetOrderedBytes(bytes, index, sizeof (uint));
             return BitConverter.ToUInt32(copiedBytes, 0);
@@ -119,8 +118,8 @@ namespace Flint.Core
 
         public static UUID GetUUID( byte[] bytes, int index )
         {
-            byte[] byteArray = bytes.Skip(index).Take(16).ToArray();
-            if (byteArray.Length == 16)
+            byte[] byteArray = bytes.Skip(index).Take(UUID.SIZE).ToArray();
+            if (byteArray.Length == UUID.SIZE)
                 return new UUID(byteArray);
             return null;
         }

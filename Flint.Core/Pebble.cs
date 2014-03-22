@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Flint.Core.Dependencies;
 using Flint.Core.Responses;
 
 namespace Flint.Core
@@ -26,25 +25,26 @@ namespace Flint.Core
 
         private readonly Dictionary<Type, List<CallbackContainer>> _callbackHandlers;
         private readonly ResponseManager _responseManager = new ResponseManager();
-        private uint _RemoteCaps = (uint)( RemoteCaps.Telephony | RemoteCaps.SMS | RemoteCaps.Android );
+        private uint _RemoteCaps = (uint)(RemoteCaps.Telephony | RemoteCaps.SMS | RemoteCaps.Android);
         private uint _SessionCaps = (uint)SessionCaps.GAMMA_RAY;
 
         /// <summary>
         ///     Create a new Pebble
         /// </summary>
-        /// <param name="port">The port to use to connect to the pebble</param>
+        /// <param name="connection">The port to use to connect to the pebble</param>
         /// <param name="pebbleId">
         ///     The four-character Pebble ID, based on its BT address.
         ///     Nothing explodes when it's incorrect, it's merely used for identification.
         /// </param>
-        public Pebble( IBluetoothPort port, string pebbleId )
+        public Pebble(IBluetoothConnection connection, string pebbleId)
         {
-            ResponseTimeout = TimeSpan.FromSeconds( 5 );
+            //ResponseTimeout = TimeSpan.FromSeconds(5);
+            ResponseTimeout = TimeSpan.FromHours(1);
             PebbleID = pebbleId;
 
             _callbackHandlers = new Dictionary<Type, List<CallbackContainer>>();
 
-            _PebbleProt = new PebbleProtocol( port );
+            _PebbleProt = new PebbleProtocol(connection);
             _PebbleProt.RawMessageReceived += RawMessageReceived;
         }
 
@@ -56,9 +56,9 @@ namespace Flint.Core
         /// <summary>
         ///     The port the Pebble is on.
         /// </summary>
-        public IBluetoothPort Port
+        public IBluetoothConnection Connection
         {
-            get { return _PebbleProt.Port; }
+            get { return _PebbleProt.Connection; }
         }
 
         public bool Alive { get; private set; }
@@ -129,14 +129,14 @@ namespace Flint.Core
         /// </summary>
         /// <param name="sessionCap"></param>
         /// <param name="remoteCaps"></param>
-        public void SetCaps( uint? sessionCap = null, uint? remoteCaps = null )
+        public void SetCaps(uint? sessionCap = null, uint? remoteCaps = null)
         {
-            if ( sessionCap != null )
+            if (sessionCap != null)
             {
                 _SessionCaps = (uint)sessionCap;
             }
 
-            if ( remoteCaps != null )
+            if (remoteCaps != null)
             {
                 _RemoteCaps = (uint)remoteCaps;
             }
@@ -150,23 +150,22 @@ namespace Flint.Core
         {
             PhoneVersionResponse response;
             //PhoneVersionResponse is received immediately after connecting, and we must respond to it before making any other calls
-            using (
-                IResponseTransaction<PhoneVersionResponse> responseTransaction =
-                    _responseManager.GetTransaction<PhoneVersionResponse>() )
+            using (IResponseTransaction<PhoneVersionResponse> responseTransaction =
+                    _responseManager.GetTransaction<PhoneVersionResponse>())
             {
                 _PebbleProt.Connect();
 
-                response = responseTransaction.AwaitResponse( ResponseTimeout );
+                response = responseTransaction.AwaitResponse(ResponseTimeout);
             }
 
-            if ( response != null )
+            if (response != null)
             {
                 byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
-                byte[] session = Util.GetBytes( _SessionCaps );
-                byte[] remote = Util.GetBytes( _RemoteCaps );
+                byte[] session = Util.GetBytes(_SessionCaps);
+                byte[] remote = Util.GetBytes(_RemoteCaps);
 
-                byte[] msg = Util.CombineArrays( prefix, session, remote );
-                await SendMessageNoResponseAsync( Endpoint.PhoneVersion, msg );
+                byte[] msg = Util.CombineArrays(prefix, session, remote);
+                await SendMessageNoResponseAsync(Endpoint.PhoneVersion, msg);
                 Alive = true;
             }
             else
@@ -193,49 +192,49 @@ namespace Flint.Core
             }
         }
 
-        public void RegisterCallback<T>( Action<T> callback ) where T : IResponse, new()
+        public void RegisterCallback<T>(Action<T> callback) where T : IResponse, new()
         {
-            if ( callback == null ) throw new ArgumentNullException( "callback" );
+            if (callback == null) throw new ArgumentNullException("callback");
 
             List<CallbackContainer> callbacks;
-            if ( _callbackHandlers.TryGetValue( typeof( T ), out callbacks ) == false )
-                _callbackHandlers[typeof( T )] = callbacks = new List<CallbackContainer>();
+            if (_callbackHandlers.TryGetValue(typeof(T), out callbacks) == false)
+                _callbackHandlers[typeof(T)] = callbacks = new List<CallbackContainer>();
 
-            callbacks.Add( CallbackContainer.Create( callback ) );
+            callbacks.Add(CallbackContainer.Create(callback));
         }
 
-        public bool UnregisterCallback<T>( Action<T> callback ) where T : IResponse
+        public bool UnregisterCallback<T>(Action<T> callback) where T : IResponse
         {
-            if ( callback == null ) throw new ArgumentNullException( "callback" );
+            if (callback == null) throw new ArgumentNullException("callback");
             List<CallbackContainer> callbacks;
-            if ( _callbackHandlers.TryGetValue( typeof( T ), out callbacks ) )
-                return callbacks.Remove( callbacks.FirstOrDefault( x => x.IsMatch( callback ) ) );
+            if (_callbackHandlers.TryGetValue(typeof(T), out callbacks))
+                return callbacks.Remove(callbacks.FirstOrDefault(x => x.IsMatch(callback)));
             return false;
         }
 
         /// <summary> Send the Pebble a ping. </summary>
         /// <param name="pingData"></param>
-        public async Task<PingResponse> PingAsync( uint pingData = 0 )
+        public async Task<PingResponse> PingAsync(uint pingData = 0)
         {
             // No need to worry about endianness as it's sent back byte for byte anyway.
-            byte[] data = Util.CombineArrays( new byte[] { 0 }, Util.GetBytes( pingData ) );
+            byte[] data = Util.CombineArrays(new byte[] { 0 }, Util.GetBytes(pingData));
 
-            return await SendMessageAsync<PingResponse>( Endpoint.Ping, data );
+            return await SendMessageAsync<PingResponse>(Endpoint.Ping, data);
         }
 
         /// <summary> Generic notification support.  Shouldn't have to use this, but feel free. </summary>
         /// <param name="type">Notification type.  So far we've got 0 for mail, 1 for SMS.</param>
         /// <param name="parts">Message parts will be clipped to 255 bytes.</param>
-        private async Task NotificationAsync( byte type, params string[] parts )
+        private async Task NotificationAsync(byte type, params string[] parts)
         {
-            string timeStamp = Util.GetTimestampFromDateTime( DateTime.Now ).ToString( CultureInfo.InvariantCulture );
+            string timeStamp = Util.GetTimestampFromDateTime(DateTime.Now).ToString(CultureInfo.InvariantCulture);
 
             //TODO: This needs to be refactored
-            parts = parts.Take( 2 ).Concat( new[] { timeStamp } ).Concat( parts.Skip( 2 ) ).ToArray();
+            parts = parts.Take(2).Concat(new[] { timeStamp }).Concat(parts.Skip(2)).ToArray();
 
             byte[] data = { type };
-            data = parts.Aggregate( data, ( current, part ) => current.Concat( Util.GetBytes( part ) ).ToArray() );
-            await SendMessageNoResponseAsync( Endpoint.Notification, data );
+            data = parts.Aggregate(data, (current, part) => current.Concat(Util.GetBytes(part)).ToArray());
+            await SendMessageNoResponseAsync(Endpoint.Notification, data);
         }
 
         /// <summary>
@@ -244,9 +243,9 @@ namespace Flint.Core
         /// <param name="sender"></param>
         /// <param name="subject"></param>
         /// <param name="body"></param>
-        public async Task NotificationMailAsync( string sender, string subject, string body )
+        public async Task NotificationMailAsync(string sender, string subject, string body)
         {
-            await NotificationAsync( 0, sender, body, subject );
+            await NotificationAsync(0, sender, body, subject);
         }
 
         /// <summary>
@@ -254,19 +253,19 @@ namespace Flint.Core
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="body"></param>
-        public async Task NotificationSMSAsync( string sender, string body )
+        public async Task NotificationSMSAsync(string sender, string body)
         {
-            await NotificationAsync( 1, sender, body );
+            await NotificationAsync(1, sender, body);
         }
 
-        public async Task NotificationFacebookAsync( string sender, string body )
+        public async Task NotificationFacebookAsync(string sender, string body)
         {
-            await NotificationAsync( 2, sender, body );
+            await NotificationAsync(2, sender, body);
         }
 
-        public async Task NotificationTwitterAsync( string sender, string body )
+        public async Task NotificationTwitterAsync(string sender, string body)
         {
-            await NotificationAsync( 3, sender, body );
+            await NotificationAsync(3, sender, body);
         }
 
         /// <summary>
@@ -276,306 +275,274 @@ namespace Flint.Core
         /// <param name="track"></param>
         /// <param name="album"></param>
         /// <param name="artist"></param>
-        public async Task SetNowPlayingAsync( string artist, string album, string track )
+        public async Task SetNowPlayingAsync(string artist, string album, string track)
         {
-            byte[] artistBytes = Util.GetBytes( artist );
-            byte[] albumBytes = Util.GetBytes( album );
-            byte[] trackBytes = Util.GetBytes( track );
+            byte[] artistBytes = Util.GetBytes(artist);
+            byte[] albumBytes = Util.GetBytes(album);
+            byte[] trackBytes = Util.GetBytes(track);
 
-            byte[] data = Util.CombineArrays( new byte[] { 16 }, artistBytes, albumBytes, trackBytes );
+            byte[] data = Util.CombineArrays(new byte[] { 16 }, artistBytes, albumBytes, trackBytes);
 
-            await SendMessageNoResponseAsync( Endpoint.MusicControl, data );
+            await SendMessageNoResponseAsync(Endpoint.MusicControl, data);
         }
 
         /// <summary> Set the time on the Pebble. Mostly convenient for syncing. </summary>
         /// <param name="dateTime">The desired DateTime.  Doesn't care about timezones.</param>
-        public async Task SetTimeAsync( DateTime dateTime )
+        public async Task SetTimeAsync(DateTime dateTime)
         {
-            byte[] timestamp = Util.GetBytes( Util.GetTimestampFromDateTime( dateTime ) );
-            byte[] data = Util.CombineArrays( new byte[] { 2 }, timestamp );
-            await SendMessageNoResponseAsync( Endpoint.Time, data );
+            byte[] timestamp = Util.GetBytes(Util.GetTimestampFromDateTime(dateTime));
+            byte[] data = Util.CombineArrays(new byte[] { 2 }, timestamp);
+            await SendMessageNoResponseAsync(Endpoint.Time, data);
         }
 
         /// <summary> Send a malformed ping (to trigger a LOGS response) </summary>
         public async Task<PingResponse> BadPingAsync()
         {
             byte[] cookie = { 1, 2, 3, 4, 5, 6, 7 };
-            return await SendMessageAsync<PingResponse>( Endpoint.Ping, cookie );
+            return await SendMessageAsync<PingResponse>(Endpoint.Ping, cookie);
         }
 
-        public async Task InstallAppAsync( PebbleBundle bundle, IProgress<ProgressValue> progress = null )
+        public async Task InstallAppAsync(PebbleBundle bundle, IProgress<ProgressValue> progress = null)
         {
-            if ( bundle == null )
-                throw new ArgumentNullException( "bundle" );
-            if ( bundle.BundleType != PebbleBundle.BundleTypes.Application )
-                throw new ArgumentException( "Bundle must be an application" );
+            if (bundle == null)
+                throw new ArgumentNullException("bundle");
+            if (bundle.BundleType != PebbleBundle.BundleTypes.Application)
+                throw new ArgumentException("Bundle must be an application");
 
-            if ( progress != null )
-                progress.Report( new ProgressValue( "Removing previous install(s) of the app if they exist", 1 ) );
-            PebbleBundle.ApplicationMetadata metaData = bundle.AppMetadata;
-            byte[] uuid = metaData.UUID;
+            if (progress != null)
+                progress.Report(new ProgressValue("Removing previous install(s) of the app if they exist", 1));
+            ApplicationMetadata metaData = bundle.AppMetadata;
+            UUID uuid = metaData.UUID;
 
-            AppbankInstallResponse appbankInstallResponse = await RemoveAppByUUID( uuid );
-            if ( appbankInstallResponse.Success == false )
+            AppbankInstallResponse appbankInstallResponse = await RemoveAppByUUID(uuid);
+            if (appbankInstallResponse.Success == false)
                 return;
 
-            if ( progress != null )
-                progress.Report( new ProgressValue( "Getting current apps", 10 ) );
+            if (progress != null)
+                progress.Report(new ProgressValue("Getting current apps", 20));
             AppbankResponse appBankResult = await GetAppbankContentsAsync();
 
-            if ( appBankResult.Success == false )
-                throw new PebbleException( "Could not obtain app list; try again" );
+            if (appBankResult.Success == false)
+                throw new PebbleException("Could not obtain app list; try again");
             AppBank appBank = appBankResult.AppBank;
 
             byte firstFreeIndex = 1;
-            foreach ( AppBank.App app in appBank.Apps )
-                if ( app.Index == firstFreeIndex )
+            foreach (App app in appBank.Apps)
+                if (app.Index == firstFreeIndex)
                     firstFreeIndex++;
-            if ( firstFreeIndex == appBank.Size )
-                throw new PebbleException( "All app banks are full" );
+            if (firstFreeIndex == appBank.Size)
+                throw new PebbleException("All app banks are full");
 
-            if ( progress != null )
-                progress.Report( new ProgressValue( "Reading app data", 30 ) );
+            if (progress != null)
+                progress.Report(new ProgressValue("Transferring app to Pebble", 40));
 
-            using ( IZip zip = IoC.Resolve<IZip>() )
+            if (await PutBytes(bundle.App, firstFreeIndex, TransferType.Binary) == false)
+                throw new PebbleException("Failed to send application binary pebble-app.bin");
+
+            if (bundle.HasResources)
             {
-                if ( false == zip.Open( bundle.FullPath ) )
-                    throw new PebbleException( string.Format( "Could not open bundle '{0}'", bundle.FullPath ) );
-
-                using ( Stream appBinary = zip.OpenEntryStream( bundle.Manifest.Application.Filename ) )
-                {
-                    if ( appBinary == null )
-                        throw new PebbleException( "Could find application entry in the bundle" );
-
-                    if ( progress != null )
-                        progress.Report( new ProgressValue( "Transferring app to Pebble", 50 ) );
-
-                    if ( await PutBytes( Util.GetBytes( appBinary ), firstFreeIndex, TransferType.Binary ) == false )
-                        throw new PebbleException( string.Format( "Failed to send application binary {0}/pebble-app.bin", bundle.FullPath ) );
-                }
-
-                if ( bundle.HasResources )
-                {
-                    using ( Stream resourcesBinary = zip.OpenEntryStream( bundle.Manifest.Resources.Filename ) )
-                    {
-                        if ( resourcesBinary == null )
-                            throw new PebbleException( "Could not find resource entry in the bundle" );
-
-                        if ( progress != null )
-                            progress.Report( new ProgressValue( "Transferring app resources to Pebble", 70 ) );
-                        if ( await PutBytes( Util.GetBytes( resourcesBinary ), firstFreeIndex, TransferType.Resources ) == false )
-                            throw new PebbleException( string.Format( "Failed to send application resources {0}/app_resources.pbpack", bundle.FullPath ) );
-                    }
-                }
+                if (progress != null)
+                    progress.Report(new ProgressValue("Transferring app resources to Pebble", 60));
+                if (await PutBytes(bundle.Resources, firstFreeIndex, TransferType.Resources) == false)
+                    throw new PebbleException("Failed to send application resources app_resources.pbpack");
             }
-            if ( progress != null )
-                progress.Report( new ProgressValue( "Adding app", 90 ) );
-            await AddApp( firstFreeIndex );
-            if ( progress != null )
-                progress.Report( new ProgressValue( "Done", 100 ) );
+
+            if (progress != null)
+                progress.Report(new ProgressValue("Adding app", 80));
+            await AddApp(firstFreeIndex);
+            if (progress != null)
+                progress.Report(new ProgressValue("Done", 100));
         }
 
         public async Task<FirmwareVersionResponse> GetFirmwareVersionAsync()
         {
-            return await SendMessageAsync<FirmwareVersionResponse>( Endpoint.FirmwareVersion, new byte[] { 0 } );
+            return await SendMessageAsync<FirmwareVersionResponse>(Endpoint.FirmwareVersion, new byte[] { 0 });
         }
 
         /// <summary>
         ///     Get the time from the connected Pebble.
         /// </summary>
-        /// <param name="async">
-        ///     When true, this returns null immediately.  Otherwise it waits for the event and sends
-        ///     the appropriate TimeReceivedEventArgs.
-        /// </param>
         /// <returns>A TimeReceivedEventArgs with the time, or null.</returns>
         public async Task<TimeResponse> GetTimeAsync()
         {
-            return await SendMessageAsync<TimeResponse>( Endpoint.Time, new byte[] { 0 } );
+            return await SendMessageAsync<TimeResponse>(Endpoint.Time, new byte[] { 0 });
         }
 
         /// <summary>
         ///     Fetch the contents of the Appbank.
         /// </summary>
-        /// <param name="async">
-        ///     When true, this returns null immediately.  Otherwise it waits for the event and sends
-        ///     the appropriate AppbankContentsReceivedEventArgs.
-        /// </param>
         /// <returns></returns>
         public async Task<AppbankResponse> GetAppbankContentsAsync()
         {
-            return await SendMessageAsync<AppbankResponse>( Endpoint.AppManager, new byte[] { 1 } );
+            return await SendMessageAsync<AppbankResponse>(Endpoint.AppManager, new byte[] { 1 });
         }
 
         /// <summary>
         ///     Remove an app from the Pebble, using an App instance retrieved from the Appbank.
         /// </summary>
         /// <param name="app"></param>
-        /// <param name="async">
-        ///     When true, this returns null immediately.  Otherwise it waits for the event and sends
-        ///     the appropriate AppbankInstallMessageEventArgs.
-        /// </param>
         /// <returns></returns>
-        public async Task<AppbankInstallResponse> RemoveAppAsync( AppBank.App app )
+        public async Task<AppbankInstallResponse> RemoveAppAsync(App app)
         {
-            byte[] msg = Util.CombineArrays( new byte[] { 2 },
-                                            Util.GetBytes( app.ID ),
-                                            Util.GetBytes( app.Index ) );
+            byte[] msg = Util.CombineArrays(new byte[] { 2 },
+                                            Util.GetBytes(app.ID),
+                                            Util.GetBytes(app.Index));
 
-            return await SendMessageAsync<AppbankInstallResponse>( Endpoint.AppManager, msg );
+            return await SendMessageAsync<AppbankInstallResponse>(Endpoint.AppManager, msg);
         }
 
-        private async Task<T> SendMessageAsync<T>( Endpoint endpoint, byte[] payload )
+        private async Task<T> SendMessageAsync<T>(Endpoint endpoint, byte[] payload)
             where T : class, IResponse, new()
         {
-            return await Task.Run( () =>
+            return await Task.Run(() =>
                                       {
                                           try
                                           {
-                                              lock ( _PebbleProt )
+                                              lock (_PebbleProt)
                                               {
                                                   using (
                                                       IResponseTransaction<T> responseTransaction =
-                                                          _responseManager.GetTransaction<T>() )
+                                                          _responseManager.GetTransaction<T>())
                                                   {
-                                                      _PebbleProt.SendMessage( (ushort)endpoint, payload );
-                                                      return responseTransaction.AwaitResponse( ResponseTimeout );
+                                                      _PebbleProt.SendMessage((ushort)endpoint, payload);
+                                                      return responseTransaction.AwaitResponse(ResponseTimeout);
                                                   }
                                               }
                                           }
-                                          catch ( TimeoutException )
+                                          catch (TimeoutException)
                                           {
                                               var result = new T();
-                                              result.SetError( "TimeoutException occurred" );
+                                              result.SetError("TimeoutException occurred");
                                               Disconnect();
                                               return result;
                                           }
-                                          catch ( Exception e )
+                                          catch (Exception e)
                                           {
                                               var result = new T();
-                                              result.SetError( e.Message );
+                                              result.SetError(e.Message);
                                               return result;
                                           }
-                                      } );
+                                      });
         }
 
-        private Task SendMessageNoResponseAsync( Endpoint endpoint, byte[] payload )
+        private Task SendMessageNoResponseAsync(Endpoint endpoint, byte[] payload)
         {
-            return Task.Run( () =>
+            return Task.Run(() =>
                                 {
                                     try
                                     {
-                                        lock ( _PebbleProt )
+                                        lock (_PebbleProt)
                                         {
-                                            _PebbleProt.SendMessage( (ushort)endpoint, payload );
+                                            _PebbleProt.SendMessage((ushort)endpoint, payload);
                                         }
                                     }
-                                    catch ( TimeoutException )
+                                    catch (TimeoutException)
                                     {
                                         Disconnect();
                                     }
-                                    catch ( Exception )
+                                    catch (Exception)
                                     {
                                     }
-                                } );
+                                });
         }
 
-        private void RawMessageReceived( object sender, RawMessageReceivedEventArgs e )
+        private void RawMessageReceived(object sender, RawMessageReceivedEventArgs e)
         {
-            Debug.WriteLine( "Received Message for Endpoint: {0}", (Endpoint)e.Endpoint );
+            Debug.WriteLine("Received Message for Endpoint: {0}", (Endpoint)e.Endpoint);
 
-            IResponse response = _responseManager.HandleResponse( (Endpoint)e.Endpoint, e.Payload );
+            IResponse response = _responseManager.HandleResponse((Endpoint)e.Endpoint, e.Payload);
 
-            if ( response != null )
+            if (response != null)
             {
                 //Check for callbacks
                 List<CallbackContainer> callbacks;
-                if ( _callbackHandlers.TryGetValue( response.GetType(), out callbacks ) )
+                if (_callbackHandlers.TryGetValue(response.GetType(), out callbacks))
                 {
-                    foreach ( CallbackContainer callback in callbacks )
-                        callback.Invoke( response );
+                    foreach (CallbackContainer callback in callbacks)
+                        callback.Invoke(response);
                 }
             }
         }
 
         public override string ToString()
         {
-            return string.Format( "Pebble {0} on {1}", PebbleID, Port );
+            return string.Format("Pebble {0} on {1}", PebbleID, Connection);
         }
 
-        private async Task<AppbankInstallResponse> RemoveAppByUUID( byte[] uuid )
+        private async Task<AppbankInstallResponse> RemoveAppByUUID(UUID uuid)
         {
-            byte[] data = Util.CombineArrays( new byte[] { 2 }, uuid );
-            return await SendMessageAsync<AppbankInstallResponse>( Endpoint.AppManager, data );
+            byte[] data = Util.CombineArrays(new byte[] { 2 }, uuid.Data);
+            return await SendMessageAsync<AppbankInstallResponse>(Endpoint.AppManager, data);
         }
 
-        private async Task<bool> PutBytes( byte[] binary, byte index, TransferType transferType )
+        private async Task<bool> PutBytes(byte[] binary, byte index, TransferType transferType)
         {
-            byte[] length = Util.GetBytes( binary.Length );
+            byte[] length = Util.GetBytes(binary.Length);
 
             //Get token
-            byte[] header = Util.CombineArrays( new byte[] { 1 }, length, new[] { (byte)transferType, index } );
+            byte[] header = Util.CombineArrays(new byte[] { 1 }, length, new[] { (byte)transferType, index });
 
-            var rawMessageArgs = await SendMessageAsync<PutBytesResponse>( Endpoint.PutBytes, header );
-            if ( rawMessageArgs.Success == false )
+            var rawMessageArgs = await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, header);
+            if (rawMessageArgs.Success == false)
                 return false;
             byte[] tokenResult = rawMessageArgs.Response;
-            byte[] token = tokenResult.Skip( 1 ).ToArray();
+            byte[] token = tokenResult.Skip(1).ToArray();
 
             const int BUFFER_SIZE = 2000;
             //Send at most 2000 bytes at a time
-            for ( int i = 0; i <= binary.Length / BUFFER_SIZE; i++ )
+            for (int i = 0; i <= binary.Length / BUFFER_SIZE; i++)
             {
-                byte[] data = binary.Skip( BUFFER_SIZE * i ).Take( BUFFER_SIZE ).ToArray();
-                byte[] dataHeader = Util.CombineArrays( new byte[] { 2 }, token, Util.GetBytes( data.Length ) );
+                byte[] data = binary.Skip(BUFFER_SIZE * i).Take(BUFFER_SIZE).ToArray();
+                byte[] dataHeader = Util.CombineArrays(new byte[] { 2 }, token, Util.GetBytes(data.Length));
                 var result =
-                    await SendMessageAsync<PutBytesResponse>( Endpoint.PutBytes, Util.CombineArrays( dataHeader, data ) );
-                if ( result.Success == false )
+                    await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, Util.CombineArrays(dataHeader, data));
+                if (result.Success == false)
                     return false;
             }
 
             //Send commit message
-            uint crc = Crc32.Calculate( binary );
-            byte[] crcBytes = Util.GetBytes( crc );
-            byte[] commitMessage = Util.CombineArrays( new byte[] { 3 }, token, crcBytes );
-            var commitResult = await SendMessageAsync<PutBytesResponse>( Endpoint.PutBytes, commitMessage );
-            if ( commitResult.Success == false )
+            uint crc = Crc32.Calculate(binary);
+            byte[] crcBytes = Util.GetBytes(crc);
+            byte[] commitMessage = Util.CombineArrays(new byte[] { 3 }, token, crcBytes);
+            var commitResult = await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, commitMessage);
+            if (commitResult.Success == false)
                 return false;
 
             //Send complete message
-            byte[] completeMessage = Util.CombineArrays( new byte[] { 5 }, token );
-            var completeResult = await SendMessageAsync<PutBytesResponse>( Endpoint.PutBytes, completeMessage );
+            byte[] completeMessage = Util.CombineArrays(new byte[] { 5 }, token);
+            var completeResult = await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, completeMessage);
 
             return completeResult.Success;
         }
 
-        private async Task AddApp( byte index )
+        private async Task AddApp(byte index)
         {
-            byte[] data = Util.CombineArrays( new byte[] { 3 }, Util.GetBytes( (uint)index ) );
-            await SendMessageNoResponseAsync( Endpoint.AppManager, data );
+            byte[] data = Util.CombineArrays(new byte[] { 3 }, Util.GetBytes((uint)index));
+            await SendMessageNoResponseAsync(Endpoint.AppManager, data);
         }
 
         private class CallbackContainer
         {
             private readonly Delegate _delegate;
 
-            private CallbackContainer( Delegate @delegate )
+            private CallbackContainer(Delegate @delegate)
             {
                 _delegate = @delegate;
             }
 
-            public bool IsMatch<T>( Action<T> callback )
+            public bool IsMatch<T>(Action<T> callback)
             {
                 return _delegate == (Delegate)callback;
             }
 
-            public void Invoke( IResponse response )
+            public void Invoke(IResponse response)
             {
-                _delegate.DynamicInvoke( response );
+                _delegate.DynamicInvoke(response);
             }
 
-            public static CallbackContainer Create<T>( Action<T> callback ) where T : IResponse, new()
+            public static CallbackContainer Create<T>(Action<T> callback) where T : IResponse, new()
             {
-                return new CallbackContainer( callback );
+                return new CallbackContainer(callback);
             }
         }
 

@@ -1,7 +1,7 @@
 ﻿using System.Windows.Input;
+using Flint.Core;
+using Flint.Core.Responses;
 using GalaSoft.MvvmLight.Command;
-using flint;
-using flint.Responses;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;

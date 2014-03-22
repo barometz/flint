@@ -2,10 +2,11 @@
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Flint.Core;
+using Flint.Core.Responses;
 using GalaSoft.MvvmLight.Command;
 using Windows.Pebble.Messages;
-using flint;
-using flint.Responses;
+
 
 namespace Windows.Pebble.ViewModels
 {
