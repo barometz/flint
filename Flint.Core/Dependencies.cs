@@ -2,6 +2,7 @@
 
 namespace Flint.Core
 {
+    [Obsolete]
     public static class Dependencies
     {
         private static Func<IZip> _zipFactory;

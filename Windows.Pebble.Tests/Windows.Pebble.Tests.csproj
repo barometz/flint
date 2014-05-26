@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4485A338-F31B-4ED1-8000-3F217694F864}</ProjectGuid>
+    <ProjectGuid>{DE98833B-D173-4453-B019-8073EBA37A79}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Flint.Core.Tests</RootNamespace>
-    <AssemblyName>Flint.Core.Tests</AssemblyName>
+    <RootNamespace>Windows.Pebble.Tests</RootNamespace>
+    <AssemblyName>Windows.Pebble.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -35,12 +35,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Ionic.Zip">
-      <HintPath>..\packages\DotNetZip.1.9.2\lib\net20\Ionic.Zip.dll</HintPath>
-    </Reference>
-    <Reference Include="Moq">
-      <HintPath>..\packages\Moq.4.2.1402.2112\lib\net40\Moq.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <Choose>
@@ -56,26 +50,22 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="PlatformDependencyTester.cs" />
-    <Compile Include="PebbleTests.cs" />
-    <Compile Include="Responses\ResponseGenerator.cs" />
-    <Compile Include="ZipImplementation.cs" />
-    <Compile Include="Resources\ResourceManager.cs" />
-    <Compile Include="PebbleBundleTests.cs" />
+    <Compile Include="Zip\ZipImplementationTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\demo.pbw" />
-  </ItemGroup>
-  <ItemGroup>
+    <ProjectReference Include="..\Flint.Core.Tests\Flint.Core.Tests.csproj">
+      <Project>{4485a338-f31b-4ed1-8000-3f217694f864}</Project>
+      <Name>Flint.Core.Tests</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Flint.Core\Flint.Core.csproj">
       <Project>{C5272F8F-CEA0-4514-A911-9F62E5B53547}</Project>
       <Name>Flint.Core</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-    <EmbeddedResource Include="Resources\Pebble-2.1-v1_5.pbz" />
+    <ProjectReference Include="..\Windows.Pebble\Windows.Pebble.csproj">
+      <Project>{2126e467-e82b-4c28-842d-64eabd67282f}</Project>
+      <Name>Windows.Pebble</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

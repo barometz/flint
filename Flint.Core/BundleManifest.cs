@@ -10,6 +10,10 @@ namespace Flint.Core
         [DataMember(Name = "manifestVersion", IsRequired = true)]
         public int ManifestVersion { get; private set; }
 
+        /// <summary> Name of the machine on which this bundle was generated. </summary>
+        [DataMember(Name = "generatedBy", IsRequired = true)]
+        public string GeneratedBy { get; private set; }
+
         [DataMember(Name = "generatedAt", IsRequired = true)]
         public uint GeneratedAt { get; private set; }
 
@@ -18,10 +22,6 @@ namespace Flint.Core
         {
             get { return Util.GetDateTimeFromTimestamp(GeneratedAt); }
         }
-
-        /// <summary> Name of the machine on which this bundle was generated. </summary>
-        [DataMember(Name = "generatedBy", IsRequired = true)]
-        public string GeneratedBy { get; private set; }
 
         /// <summary> The manifest for the application contained in this bundle. </summary>
         [DataMember(Name = "application", IsRequired = false)]

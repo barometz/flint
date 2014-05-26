@@ -8,15 +8,17 @@ namespace Flint.Core.Tests
     [TestClass]
     public class PebbleBundleTests
     {
-        [TestMethod]
-        public void ConstructorLoadsManifestForBundle()
-        {
-            Stream testBundle = ResourceManager.GetTestBundle();
+       
 
-            Dependencies.RegisterZipImplementation(() => new ZipImplementation());
+        [TestMethod]
+        public void CanLoadInformationFromAppBundle()
+        {
+            Stream testBundle = ResourceManager.GetAppBundle();
+
+            var bundle = new PebbleBundle(testBundle, new ZipImplementation());
             
-            var bundle = new PebbleBundle(testBundle);
-            
+            Assert.AreEqual(PebbleBundle.BundleTypes.Application, bundle.BundleType);
+
             var manifest = bundle.Manifest;
             Assert.IsNotNull(manifest);
             Assert.AreEqual(new DateTime(2013, 4, 13, 18, 3, 16), manifest.GeneratedAtDateTime);
@@ -48,6 +50,30 @@ namespace Flint.Core.Tests
             Assert.AreEqual("8.1", bundle.AppMetadata.StructVersion);
             Assert.AreEqual((uint)2796, bundle.AppMetadata.SymbolTableAddress);
             Assert.AreEqual("ae9984f3-0404-409b-8a17-d50478c02d3e", bundle.AppMetadata.UUID.ToString());
+        }
+
+        [TestMethod]
+        public void CanLoadInformationFromFirmwareBundle()
+        {
+            Stream testBundle = ResourceManager.GetFirmwareBundle();
+
+            var bundle = new PebbleBundle(testBundle, new ZipImplementation());
+
+            Assert.AreEqual(PebbleBundle.BundleTypes.Firmware, bundle.BundleType);
+            Assert.IsNotNull(bundle.Firmware);
+
+            Assert.IsNotNull(bundle.Manifest);
+
+            Assert.IsNotNull(bundle.Manifest.Firmware);
+            Assert.AreEqual("tintin_fw.bin", bundle.Manifest.Firmware.Filename);
+            Assert.AreEqual(new DateTime(2014, 5, 6, 6, 32, 23), bundle.Manifest.Firmware.TimestampDT);
+            Assert.AreEqual(2824806042, bundle.Manifest.Firmware.CRC);
+            Assert.AreEqual("v1_5", bundle.Manifest.Firmware.HardwareRevision);
+            Assert.AreEqual("normal", bundle.Manifest.Firmware.Type);
+            Assert.AreEqual(434731, bundle.Manifest.Firmware.Size);
+
+            Assert.IsTrue(bundle.HasResources);
+            Assert.IsNotNull(bundle.Resources);
         }
     }
 }

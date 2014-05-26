@@ -38,8 +38,7 @@ namespace Flint.Core
         /// </param>
         public Pebble(IBluetoothConnection connection, string pebbleId)
         {
-            //ResponseTimeout = TimeSpan.FromSeconds(5);
-            ResponseTimeout = TimeSpan.FromHours(1);
+            ResponseTimeout = TimeSpan.FromSeconds(5);
             PebbleID = pebbleId;
 
             _callbackHandlers = new Dictionary<Type, List<CallbackContainer>>();
@@ -354,6 +353,26 @@ namespace Flint.Core
                 progress.Report(new ProgressValue("Done", 100));
         }
 
+        public async Task<bool> InstallFirmwareAsync(PebbleBundle bundle, IProgress<ProgressValue> progress = null )
+        {
+            if (bundle == null) throw new ArgumentNullException("bundle");
+            if (bundle.BundleType != PebbleBundle.BundleTypes.Firmware) 
+                throw new ArgumentException("Bundle must be firmware");
+            
+            bool success = true;
+            if (bundle.HasResources)
+            {
+                success = await PutBytes(bundle.Resources, 0, TransferType.SysResources);
+            }
+
+            if (success)
+            {
+                success = await PutBytes(bundle.Firmware, 0, TransferType.Firmware);    
+            }
+
+            return success;
+        }
+
         public async Task<FirmwareVersionResponse> GetFirmwareVersionAsync()
         {
             return await SendMessageAsync<FirmwareVersionResponse>(Endpoint.FirmwareVersion, new byte[] { 0 });
@@ -494,8 +513,7 @@ namespace Flint.Core
             {
                 byte[] data = binary.Skip(BUFFER_SIZE * i).Take(BUFFER_SIZE).ToArray();
                 byte[] dataHeader = Util.CombineArrays(new byte[] { 2 }, token, Util.GetBytes(data.Length));
-                var result =
-                    await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, Util.CombineArrays(dataHeader, data));
+                var result = await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, Util.CombineArrays(dataHeader, data));
                 if (result.Success == false)
                     return false;
             }

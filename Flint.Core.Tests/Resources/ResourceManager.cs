@@ -7,9 +7,14 @@ namespace Flint.Core.Tests.Resources
 {
     public class ResourceManager
     {
-        public static Stream GetTestBundle()
+        public static Stream GetAppBundle()
         {
             return GetResourceByName("demo.pbw");
+        }
+
+        public static Stream GetFirmwareBundle()
+        {
+            return GetResourceByName("Pebble-2.1-v1_5.pbz");
         }
 
         private static Stream GetResourceByName(string name)

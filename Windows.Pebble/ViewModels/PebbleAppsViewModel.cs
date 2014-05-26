@@ -87,7 +87,11 @@ namespace Windows.Pebble.ViewModels
             };
             if ( openDialog.ShowDialog() == true )
             {
-                var bundle = new PebbleBundle( openDialog.OpenFile() );
+                PebbleBundle bundle;
+                using (var zip = new Zip.Zip())
+                {
+                    bundle = new PebbleBundle(openDialog.OpenFile(), zip);    
+                }
 
                 if ( _pebble.Alive == false )
                     return;

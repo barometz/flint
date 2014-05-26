@@ -26,7 +26,7 @@ namespace Flint.Core
         public uint CRC { get; private set; }
 
         /// <summary> The human-readable version string for the resources package. </summary>
-        [DataMember(Name = "friendlyVersion", IsRequired = true)]
+        [DataMember(Name = "friendlyVersion", IsRequired = false)]
         public string FriendlyVersion { get; private set; }
 
         /// <summary> The size of the resources package in bytes. </summary>
