@@ -2,7 +2,7 @@
 using System.Linq;
 using Ionic.Zip;
 
-namespace Flint.Core.Tests.Dependencies
+namespace Flint.Core.Tests
 {
     public class ZipImplementation : IZip
     {

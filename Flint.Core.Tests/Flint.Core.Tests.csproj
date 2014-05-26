@@ -56,7 +56,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="DependencyTester.cs" />
+    <Compile Include="PlatformDependencyTester.cs" />
     <Compile Include="ZipImplementation.cs" />
     <Compile Include="Resources\ResourceManager.cs" />
     <Compile Include="PebbleBundleTests.cs" />

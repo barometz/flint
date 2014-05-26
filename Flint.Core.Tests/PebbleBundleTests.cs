@@ -1,5 +1,4 @@
 ﻿using System;
-using Flint.Core.Tests.Dependencies;
 using Flint.Core.Tests.Resources;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
@@ -14,7 +13,7 @@ namespace Flint.Core.Tests
         {
             Stream testBundle = ResourceManager.GetTestBundle();
 
-            Core.Dependencies.RegisterZipImplementation(() => new ZipImplementation());
+            Dependencies.RegisterZipImplementation(() => new ZipImplementation());
             
             var bundle = new PebbleBundle(testBundle);
             

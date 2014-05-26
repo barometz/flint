@@ -1,17 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint", "flint\flint.csproj", "{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint-test", "flint-test\flint-test.csproj", "{9B8D1C0B-D406-4E0A-9F00-254339E32642}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "flint-bundletest", "flint-bundletest\flint-bundletest.csproj", "{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}"
-EndProject
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30324.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Windows.Pebble", "Windows.Pebble\Windows.Pebble.csproj", "{2126E467-E82B-4C28-842D-64EABD67282F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flint.Core", "Flint.Core\Flint.Core.csproj", "{C5272F8F-CEA0-4514-A911-9F62E5B53547}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flint.Core.Tests", "Flint.Core.Tests\Flint.Core.Tests.csproj", "{4485A338-F31B-4ED1-8000-3F217694F864}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Windows.Pebble.Tests", "Windows.Pebble.Tests\Windows.Pebble.Tests.csproj", "{DE98833B-D173-4453-B019-8073EBA37A79}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,24 +18,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Docs|Any CPU.ActiveCfg = Docs|Any CPU
-		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Docs|Any CPU.Build.0 = Docs|Any CPU
-		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BCB6FC0C-46DE-4AAE-B948-AA6A5EF0B806}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Docs|Any CPU.ActiveCfg = Docs|Any CPU
-		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Docs|Any CPU.Build.0 = Docs|Any CPU
-		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9B8D1C0B-D406-4E0A-9F00-254339E32642}.Release|Any CPU.Build.0 = Release|Any CPU
-		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Docs|Any CPU.ActiveCfg = Debug|Any CPU
-		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Docs|Any CPU.Build.0 = Debug|Any CPU
-		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{29FA5187-E4B1-4D17-9B49-4D2BAADFF850}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2126E467-E82B-4C28-842D-64EABD67282F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2126E467-E82B-4C28-842D-64EABD67282F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2126E467-E82B-4C28-842D-64EABD67282F}.Docs|Any CPU.ActiveCfg = Debug|Any CPU
@@ -56,6 +36,12 @@ Global
 		{4485A338-F31B-4ED1-8000-3F217694F864}.Docs|Any CPU.Build.0 = Debug|Any CPU
 		{4485A338-F31B-4ED1-8000-3F217694F864}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4485A338-F31B-4ED1-8000-3F217694F864}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE98833B-D173-4453-B019-8073EBA37A79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE98833B-D173-4453-B019-8073EBA37A79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE98833B-D173-4453-B019-8073EBA37A79}.Docs|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE98833B-D173-4453-B019-8073EBA37A79}.Docs|Any CPU.Build.0 = Debug|Any CPU
+		{DE98833B-D173-4453-B019-8073EBA37A79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE98833B-D173-4453-B019-8073EBA37A79}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
