@@ -16,21 +16,31 @@ namespace Flint.Core
         private static uint ProcessBuffer( byte[] buffer, uint c = 0xFFFFFFFF )
         {
             int wordCount = buffer.Length/4;
-            if (wordCount%4 != 0)
+            if (buffer.Length%4 != 0)
                 wordCount++;
-            return Enumerable.Range(0, wordCount - 1).Aggregate(c, ( current, i ) =>
-                                                                   ProcessWord(buffer.Skip(i*4).Take(4).ToArray(),
-                                                                               current));
+
+            uint crc = c;
+            foreach (var i in Enumerable.Range(0, wordCount))
+            {
+                crc = ProcessWord(GetUInt32(buffer, i*4), crc);
+            }
+            return crc; 
         }
 
-        private static uint ProcessWord( byte[] word, uint crc )
+        private static uint GetUInt32(byte[] buffer, int start)
         {
-            if (word.Length < 4)
-                word = PadArray(word, 4);
+            var size = Math.Min(buffer.Length - start, 4);
+            var rv = new byte[4];
+            Array.Copy(buffer, start, rv, 0, size);
+            if (size < 4)
+                Array.Reverse(rv, 0, size);
+            return BitConverter.ToUInt32(rv, 0);
+        }
 
-            uint d = BitConverter.ToUInt32(word, 0);
-            crc ^= d;
-
+        private static uint ProcessWord( uint word, uint crc )
+        {
+            crc ^= word;
+            
             foreach (int i in Enumerable.Range(0, 32))
             {
                 if (( crc & 0x80000000 ) != 0)
@@ -49,7 +59,6 @@ namespace Flint.Core
             {
                 Array.Reverse(array);
                 Array.Resize(ref array, totalLength);
-                Array.Reverse(array);
             }
             return array;
         }

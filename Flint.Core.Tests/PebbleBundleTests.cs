@@ -8,8 +8,6 @@ namespace Flint.Core.Tests
     [TestClass]
     public class PebbleBundleTests
     {
-       
-
         [TestMethod]
         public void CanLoadInformationFromAppBundle()
         {

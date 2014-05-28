@@ -81,7 +81,7 @@ namespace Windows.Pebble.ViewModels
                 CheckFileExists = true,
                 CheckPathExists = true,
                 DefaultExt = "*.pbw",
-                Filter = "Pebble Apps|*.pbw",
+                Filter = "Pebble Apps|*.pbw|All Files|*",
                 RestoreDirectory = true,
                 Title = "Pebble App"
             };

@@ -353,22 +353,43 @@ namespace Flint.Core
                 progress.Report(new ProgressValue("Done", 100));
         }
 
-        public async Task<bool> InstallFirmwareAsync(PebbleBundle bundle, IProgress<ProgressValue> progress = null )
+        public async Task<bool> InstallFirmwareAsync(PebbleBundle bundle, IProgress<ProgressValue> progress = null)
         {
             if (bundle == null) throw new ArgumentNullException("bundle");
-            if (bundle.BundleType != PebbleBundle.BundleTypes.Firmware) 
+            if (bundle.BundleType != PebbleBundle.BundleTypes.Firmware)
                 throw new ArgumentException("Bundle must be firmware");
-            
-            bool success = true;
-            if (bundle.HasResources)
+
+            if (progress != null)
+                progress.Report(new ProgressValue("Starting firmware install", 1));
+            if ((await SendSystemMessageAsync(SystemMessage.FirmwareStart)).Success == false)
             {
-                success = await PutBytes(bundle.Resources, 0, TransferType.SysResources);
+                return false;
             }
 
-            if (success)
+
+            if (bundle.HasResources)
             {
-                success = await PutBytes(bundle.Firmware, 0, TransferType.Firmware);    
+                if (progress != null)
+                    progress.Report(new ProgressValue("Transfering firmware resources", 25));
+                if (await PutBytes(bundle.Resources, 0, TransferType.SysResources) == false)
+                {
+                    return false;
+                }
             }
+
+            if (progress != null)
+                progress.Report(new ProgressValue("Transfering firmware", 50));
+            if (await PutBytes(bundle.Firmware, 0, TransferType.Firmware) == false)
+            {
+                return false;
+            }
+
+            if (progress != null)
+                progress.Report(new ProgressValue("Completing firmware install", 75));
+            bool success = (await SendSystemMessageAsync(SystemMessage.FirmwareComplete)).Success;
+            
+            if (progress != null)
+                progress.Report(new ProgressValue("Done installing firmware", 100));
 
             return success;
         }
@@ -408,6 +429,12 @@ namespace Flint.Core
                                             Util.GetBytes(app.Index));
 
             return await SendMessageAsync<AppbankInstallResponse>(Endpoint.AppManager, msg);
+        }
+
+        private async Task<SystemMessageResponse> SendSystemMessageAsync(SystemMessage message)
+        {
+            byte[] data = { 0, (byte)message };
+            return await SendMessageAsync<SystemMessageResponse>(Endpoint.SystemMessage, data);
         }
 
         private async Task<T> SendMessageAsync<T>(Endpoint endpoint, byte[] payload)
@@ -504,6 +531,7 @@ namespace Flint.Core
             var rawMessageArgs = await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, header);
             if (rawMessageArgs.Success == false)
                 return false;
+
             byte[] tokenResult = rawMessageArgs.Response;
             byte[] token = tokenResult.Skip(1).ToArray();
 
@@ -515,22 +543,41 @@ namespace Flint.Core
                 byte[] dataHeader = Util.CombineArrays(new byte[] { 2 }, token, Util.GetBytes(data.Length));
                 var result = await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, Util.CombineArrays(dataHeader, data));
                 if (result.Success == false)
+                {
+                    await AbortPutBytesAsync(token);
                     return false;
+                }
             }
 
             //Send commit message
-            uint crc = Crc32.Calculate(binary);
+            uint crc = Crc32.Calculate(binary);            
             byte[] crcBytes = Util.GetBytes(crc);
             byte[] commitMessage = Util.CombineArrays(new byte[] { 3 }, token, crcBytes);
             var commitResult = await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, commitMessage);
             if (commitResult.Success == false)
+            {
+                await AbortPutBytesAsync(token);
                 return false;
+            }
+
 
             //Send complete message
             byte[] completeMessage = Util.CombineArrays(new byte[] { 5 }, token);
             var completeResult = await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, completeMessage);
-
+            if (completeResult.Success == false)
+            {
+                await AbortPutBytesAsync(token);
+            }
             return completeResult.Success;
+        }
+
+        private async Task<PutBytesResponse> AbortPutBytesAsync(byte[] token)
+        {
+            if (token == null) throw new ArgumentNullException("token");
+
+            byte[] data = Util.CombineArrays(new byte[] {4}, token);
+
+            return await SendMessageAsync<PutBytesResponse>(Endpoint.PutBytes, data);
         }
 
         private async Task AddApp(byte index)
@@ -571,6 +618,18 @@ namespace Flint.Core
             SysResources = 3,
             Resources = 4,
             Binary = 5
+        }
+
+        private enum SystemMessage : byte
+        {
+            FirmwareAvailible = 0,
+            FirmwareStart = 1,
+            FirmwareComplete = 2,
+            FirmwareFail = 3,
+            FirmwareUpToDate = 4,
+            FirmwareOutOfDate = 5,
+            BluetoothStartDiscoverable = 6,
+            BluetoothEndDiscoverable = 7
         }
     }
 }

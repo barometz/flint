@@ -80,7 +80,7 @@ namespace Flint.Core
 
                     //TODO: generic response or event for unhandled responses
 #if DEBUG
-                    //Using this to find responses that do now have classes to handle them
+                    //Using this to find responses that do not have classes to handle them
                     if (rv == null && Debugger.IsAttached)
                         Debugger.Break();
 #endif
@@ -147,6 +147,7 @@ namespace Flint.Core
             void IResponseSetter.SetError( byte[] errorPayload )
             {
                 _response.SetError(errorPayload);
+                Debug.WriteLine("{0} Error: {1}", typeof(T).Name, _response.ErrorMessage);
                 _resetEvent.Set();
             }
 

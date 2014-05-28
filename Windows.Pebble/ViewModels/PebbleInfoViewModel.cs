@@ -6,6 +6,7 @@ using Flint.Core;
 using Flint.Core.Responses;
 using GalaSoft.MvvmLight.Command;
 using Windows.Pebble.Messages;
+using Microsoft.Win32;
 
 
 namespace Windows.Pebble.ViewModels
@@ -14,12 +15,14 @@ namespace Windows.Pebble.ViewModels
     {
         private readonly DispatcherTimer _timer = new DispatcherTimer( DispatcherPriority.Background );
         private readonly RelayCommand _syncTimeCommand;
+        private readonly RelayCommand _updateFirmwareCommand;
 
         private TimeSpan? _PebbleTimeOffset;
 
         public PebbleInfoViewModel()
         {
             _syncTimeCommand = new RelayCommand(OnSyncTime);
+            _updateFirmwareCommand = new RelayCommand(OnUpdateFirmware);
 
             _timer.Tick += ( sender, e ) => UpdateTimes();
             _timer.Interval = TimeSpan.FromSeconds( 1 );
@@ -28,6 +31,11 @@ namespace Windows.Pebble.ViewModels
         public ICommand SyncTimeCommand
         {
             get { return _syncTimeCommand; }
+        }
+
+        public ICommand UpdateFirmwareCommand
+        {
+            get { return _updateFirmwareCommand; }
         }
 
         public DateTime? CurrentTime
@@ -74,6 +82,31 @@ namespace Windows.Pebble.ViewModels
         {
             await _pebble.SetTimeAsync(DateTime.Now);
             await LoadPebbleTimeAsync();
+        }
+
+        private async void OnUpdateFirmware()
+        {
+            var openDialog = new OpenFileDialog
+            {
+                CheckFileExists = true,
+                CheckPathExists = true,
+                DefaultExt = "*.pbz",
+                Filter = "Pebble Firmware|*.pbz|All Files|*",
+                RestoreDirectory = true,
+                Title = "Pebble Firmware"
+            };
+            if (openDialog.ShowDialog() == true)
+            {
+                PebbleBundle bundle;
+                using (var zip = new Zip.Zip())
+                {
+                    bundle = new PebbleBundle(openDialog.OpenFile(), zip);
+                }
+
+                if (_pebble.Alive == false)
+                    return;
+                await _pebble.InstallFirmwareAsync(bundle);
+            }
         }
 
         private async Task LoadPebbleTimeAsync()

@@ -71,6 +71,7 @@
     <Compile Include="Responses\PingResponse.cs" />
     <Compile Include="Responses\PutBytesResponse.cs" />
     <Compile Include="Responses\ResponseBase.cs" />
+    <Compile Include="Responses\SystemMessageResponse.cs" />
     <Compile Include="Responses\TimeResponse.cs" />
     <Compile Include="Serialization\BinarySerializer.cs" />
     <Compile Include="Serialization\SerializableAttribute.cs" />

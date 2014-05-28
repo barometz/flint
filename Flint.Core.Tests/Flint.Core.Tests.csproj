@@ -59,6 +59,7 @@
     <Compile Include="PlatformDependencyTester.cs" />
     <Compile Include="PebbleTests.cs" />
     <Compile Include="Responses\ResponseGenerator.cs" />
+    <Compile Include="Crc32Tests.cs" />
     <Compile Include="ZipImplementation.cs" />
     <Compile Include="Resources\ResourceManager.cs" />
     <Compile Include="PebbleBundleTests.cs" />

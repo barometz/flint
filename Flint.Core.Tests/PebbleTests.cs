@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Flint.Core.Responses;
 using Flint.Core.Tests.Responses;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -77,7 +75,11 @@ namespace Flint.Core.Tests
             //Put bytes complete message
             bluetoothConnection.Setup(x => x.Write(It.Is<byte[]>(b => b.Length == 5)))
                 .Raises(x => x.DataReceived += null, bluetoothConnection, ResponseGenerator.GetBytesReceivedResponse(Endpoint.PutBytes))
-                .Verifiable(); 
+                .Verifiable();
+            //Send and complete firmware system messages
+            bluetoothConnection.Setup(x => x.Write(It.Is<byte[]>(b => b.Length == 6)))
+                .Raises(x => x.DataReceived += null, bluetoothConnection, ResponseGenerator.GetBytesReceivedResponse(Endpoint.SystemMessage))
+                .Verifiable();
 
             var pebble = new Pebble(bluetoothConnection.Object, TEST_PEBBLE_ID);
 
