@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Flint.Core.Bundles;
 using Flint.Core.Tests.Responses;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -31,25 +32,12 @@ namespace Flint.Core.Tests
             await pebble.InstallFirmwareAsync(null);
         }
 
-        [TestMethod, ExpectedException(typeof(ArgumentException))]
-        public async Task InstallFirmwareAsyncRequiresFirmwareBundle()
-        {
-            var bluetoothConnection = new Mock<IBluetoothConnection>();
-            var pebble = new Pebble(bluetoothConnection.Object, TEST_PEBBLE_ID);
-
-            var bundle = new Mock<PebbleBundle>();
-            bundle.SetupGet(x => x.BundleType).Returns(PebbleBundle.BundleTypes.Application);
-
-            await pebble.InstallFirmwareAsync(bundle.Object);
-        }
-
         [TestMethod]
         public async Task InstallFirmwareAsyncTest()
         {
-            var bundle = new Mock<PebbleBundle>();
+            var bundle = new Mock<FirmwareBundle>();
             var firmwareBytes = new byte[16];
             var resourceBytes = new byte[4];
-            bundle.SetupGet(x => x.BundleType).Returns(PebbleBundle.BundleTypes.Firmware);
             bundle.SetupGet(x => x.HasResources).Returns(true);
             bundle.SetupGet(x => x.Resources).Returns(resourceBytes);
             bundle.SetupGet(x => x.Firmware).Returns(firmwareBytes);

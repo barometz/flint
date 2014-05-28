@@ -2,17 +2,11 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using Flint.Core.Serialization;
 
 namespace Flint.Core
 {
     internal static class Util
     {
-        public static T ReadStruct<T>( Stream stream ) where T : struct
-        {
-            return BinarySerializer.ReadObject<T>(stream);
-        }
-
         /// <summary>
         ///     Convert a Unix timestamp to a DateTime object.
         /// </summary>

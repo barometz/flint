@@ -1,4 +1,5 @@
 ﻿using System;
+using Flint.Core.Bundles;
 using Flint.Core.Tests.Resources;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
@@ -12,18 +13,15 @@ namespace Flint.Core.Tests
         public void CanLoadInformationFromAppBundle()
         {
             Stream testBundle = ResourceManager.GetAppBundle();
-
-            var bundle = new PebbleBundle(testBundle, new ZipImplementation());
+            var bundle = new AppBundle();
+            bundle.Load(testBundle, new ZipImplementation());
             
-            Assert.AreEqual(PebbleBundle.BundleTypes.Application, bundle.BundleType);
-
             var manifest = bundle.Manifest;
             Assert.IsNotNull(manifest);
             Assert.AreEqual(new DateTime(2013, 4, 13, 18, 3, 16), manifest.GeneratedAtDateTime);
             Assert.AreEqual("frontier", manifest.GeneratedBy);
             Assert.AreEqual(1, manifest.ManifestVersion);
             Assert.AreEqual("application", manifest.Type);
-            Assert.AreEqual(PebbleBundle.BundleTypes.Application, bundle.BundleType);
             Assert.IsTrue(manifest.Resources.Size > 0);
             Assert.IsTrue(bundle.HasResources);
 
@@ -55,9 +53,9 @@ namespace Flint.Core.Tests
         {
             Stream testBundle = ResourceManager.GetFirmwareBundle();
 
-            var bundle = new PebbleBundle(testBundle, new ZipImplementation());
+            var bundle = new FirmwareBundle();
+            bundle.Load(testBundle, new ZipImplementation());
 
-            Assert.AreEqual(PebbleBundle.BundleTypes.Firmware, bundle.BundleType);
             Assert.IsNotNull(bundle.Firmware);
 
             Assert.IsNotNull(bundle.Manifest);

@@ -44,6 +44,8 @@
     <Compile Include="ApplicationManifest.cs" />
     <Compile Include="ApplicationMetadata.cs" />
     <Compile Include="BundleManifest.cs" />
+    <Compile Include="Bundles\AppBundle.cs" />
+    <Compile Include="Bundles\FirmwareBundle.cs" />
     <Compile Include="BytesReceivedEventArgs.cs" />
     <Compile Include="Crc32.cs" />
     <Compile Include="Dependencies.cs" />
@@ -53,7 +55,7 @@
     <Compile Include="FirmwareManifest.cs" />
     <Compile Include="FirmwareVersion.cs" />
     <Compile Include="Pebble.cs" />
-    <Compile Include="PebbleBundle.cs" />
+    <Compile Include="Bundles\BundleBase.cs" />
     <Compile Include="PebbleException.cs" />
     <Compile Include="PebbleProtocol.cs" />
     <Compile Include="ProgressValue.cs" />

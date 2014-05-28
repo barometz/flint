@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Flint.Core.Bundles;
+using Flint.Core.Responses;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Flint.Core.Responses;
 
 namespace Flint.Core
 {
@@ -301,12 +301,10 @@ namespace Flint.Core
             return await SendMessageAsync<PingResponse>(Endpoint.Ping, cookie);
         }
 
-        public async Task InstallAppAsync(PebbleBundle bundle, IProgress<ProgressValue> progress = null)
+        public async Task InstallAppAsync(AppBundle bundle, IProgress<ProgressValue> progress = null)
         {
             if (bundle == null)
                 throw new ArgumentNullException("bundle");
-            if (bundle.BundleType != PebbleBundle.BundleTypes.Application)
-                throw new ArgumentException("Bundle must be an application");
 
             if (progress != null)
                 progress.Report(new ProgressValue("Removing previous install(s) of the app if they exist", 1));
@@ -353,11 +351,9 @@ namespace Flint.Core
                 progress.Report(new ProgressValue("Done", 100));
         }
 
-        public async Task<bool> InstallFirmwareAsync(PebbleBundle bundle, IProgress<ProgressValue> progress = null)
+        public async Task<bool> InstallFirmwareAsync(FirmwareBundle bundle, IProgress<ProgressValue> progress = null)
         {
             if (bundle == null) throw new ArgumentNullException("bundle");
-            if (bundle.BundleType != PebbleBundle.BundleTypes.Firmware)
-                throw new ArgumentException("Bundle must be firmware");
 
             if (progress != null)
                 progress.Report(new ProgressValue("Starting firmware install", 1));
@@ -365,7 +361,6 @@ namespace Flint.Core
             {
                 return false;
             }
-
 
             if (bundle.HasResources)
             {

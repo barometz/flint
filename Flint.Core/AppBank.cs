@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
+using Flint.Core.Serialization;
 
 namespace Flint.Core
 {
@@ -67,10 +67,7 @@ namespace Flint.Core
                 Array.Reverse(bytes, 71, 4);
             }
 
-            using (var ms = new MemoryStream(bytes))
-            {
-                return Util.ReadStruct<App>(ms);
-            }
+            return BinarySerializer.ReadObject<App>(bytes);
         }
 
         public override string ToString()

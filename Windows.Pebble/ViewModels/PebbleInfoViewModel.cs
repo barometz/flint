@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Flint.Core;
+using Flint.Core.Bundles;
 using Flint.Core.Responses;
 using GalaSoft.MvvmLight.Command;
 using Windows.Pebble.Messages;
@@ -97,10 +98,10 @@ namespace Windows.Pebble.ViewModels
             };
             if (openDialog.ShowDialog() == true)
             {
-                PebbleBundle bundle;
+                var bundle = new FirmwareBundle();
                 using (var zip = new Zip.Zip())
                 {
-                    bundle = new PebbleBundle(openDialog.OpenFile(), zip);
+                    bundle.Load(openDialog.OpenFile(), zip);
                 }
 
                 if (_pebble.Alive == false)

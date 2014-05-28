@@ -1,10 +1,10 @@
-﻿using System.ComponentModel;
+﻿using Flint.Core.Bundles;
+using GalaSoft.MvvmLight.Command;
+using Microsoft.Win32;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
-using Flint.Core;
-using GalaSoft.MvvmLight.Command;
-using Microsoft.Win32;
 using Windows.Pebble.Messages;
 
 namespace Windows.Pebble.ViewModels
@@ -87,10 +87,10 @@ namespace Windows.Pebble.ViewModels
             };
             if ( openDialog.ShowDialog() == true )
             {
-                PebbleBundle bundle;
+                var bundle = new AppBundle();
                 using (var zip = new Zip.Zip())
                 {
-                    bundle = new PebbleBundle(openDialog.OpenFile(), zip);    
+                    bundle.Load(openDialog.OpenFile(), zip);
                 }
 
                 if ( _pebble.Alive == false )
