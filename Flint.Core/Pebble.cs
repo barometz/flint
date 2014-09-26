@@ -21,6 +21,8 @@ namespace Flint.Core
             GAMMA_RAY = 0x80000000
         }
 
+        public const byte PEBBLE_CLIENT_VERSION = 2;
+
         private readonly PebbleProtocol _PebbleProt;
 
         private readonly Dictionary<Type, List<CallbackContainer>> _callbackHandlers;
@@ -159,7 +161,7 @@ namespace Flint.Core
 
             if (response != null)
             {
-                byte[] prefix = { 0x01, 0xFF, 0xFF, 0xFF, 0xFF };
+                byte[] prefix = { PEBBLE_CLIENT_VERSION, 0xFF, 0xFF, 0xFF, 0xFF };
                 byte[] session = Util.GetBytes(_SessionCaps);
                 byte[] remote = Util.GetBytes(_RemoteCaps);
 
