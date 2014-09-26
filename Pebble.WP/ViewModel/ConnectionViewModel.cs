@@ -5,6 +5,7 @@ using System.Windows.Input;
 using Windows.UI.Xaml.Controls;
 using Pebble.WP.Bluetooth;
 using Pebble.WP.Common;
+using Pebble.WP.Views;
 
 namespace Pebble.WP.ViewModel
 {

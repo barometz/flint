@@ -53,7 +53,7 @@ namespace Windows.Pebble.ViewModels
 
         private async Task LoadAppsAsync()
         {
-            if ( _pebble == null || _pebble.Alive == false )
+            if ( _pebble == null || _pebble.IsAlive == false )
                 return;
 
             Loading = true;
@@ -67,7 +67,7 @@ namespace Windows.Pebble.ViewModels
 
         private async void OnRemoveApp( Flint.Core.App app )
         {
-            if ( _pebble.Alive == false )
+            if ( _pebble.IsAlive == false )
                 return;
 
             await _pebble.RemoveAppAsync( app );
@@ -93,7 +93,7 @@ namespace Windows.Pebble.ViewModels
                     bundle.Load(openDialog.OpenFile(), zip);
                 }
 
-                if ( _pebble.Alive == false )
+                if ( _pebble.IsAlive == false )
                     return;
                 await _pebble.InstallAppAsync( bundle );
                 await LoadAppsAsync();

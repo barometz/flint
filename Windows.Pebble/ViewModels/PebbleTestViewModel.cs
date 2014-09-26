@@ -34,7 +34,7 @@ namespace Windows.Pebble.ViewModels
 
         private async void OnPing()
         {
-            if (_pebble == null || _pebble.Alive == false)
+            if (_pebble == null || _pebble.IsAlive == false)
                 return;
 
             PingResponse pingResponse = await _pebble.PingAsync();
@@ -43,7 +43,7 @@ namespace Windows.Pebble.ViewModels
 
         private async void OnBadPing()
         {
-            if ( _pebble == null || _pebble.Alive == false )
+            if ( _pebble == null || _pebble.IsAlive == false )
                 return;
 
             PingResponse pingResponse = await _pebble.BadPingAsync();

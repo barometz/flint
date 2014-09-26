@@ -62,7 +62,7 @@ namespace Flint.Core
             get { return _PebbleProt.Connection; }
         }
 
-        public bool Alive { get; private set; }
+        public bool IsAlive { get; private set; }
         public TimeSpan ResponseTimeout { get; set; }
 
         //TODO: This should be pushed to the platform code
@@ -167,7 +167,7 @@ namespace Flint.Core
 
                 byte[] msg = Util.CombineArrays(prefix, session, remote);
                 await SendMessageNoResponseAsync(Endpoint.PhoneVersion, msg);
-                Alive = true;
+                IsAlive = true;
             }
             else
             {
@@ -189,7 +189,7 @@ namespace Flint.Core
                 // If closing the serial port didn't work for some reason we're still effectively 
                 // disconnected, although the port will probably be in an invalid state.  Need to 
                 // find a good way to handle that.
-                Alive = false;
+                IsAlive = false;
             }
         }
 

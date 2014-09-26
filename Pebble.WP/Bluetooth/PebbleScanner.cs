@@ -1,16 +1,13 @@
-﻿using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
-using Windows.Storage.Streams;
-using Flint.Core;
+﻿using Flint.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
-using Windows.Devices.Bluetooth.Rfcomm;
-using Windows.Networking;
 using Windows.Networking.Proximity;
 using Windows.Networking.Sockets;
+using Windows.Storage.Streams;
 
 namespace Pebble.WP.Bluetooth
 {
@@ -24,20 +21,23 @@ namespace Pebble.WP.Bluetooth
         {
             // Configure PeerFinder to search for all paired devices.
             PeerFinder.AlternateIdentities["Bluetooth:Paired"] = "";
-            return (await PeerFinder.FindAllPeersAsync()).Select(
-                    x => new Flint.Core.Pebble(new PebbleBluetoothConnection(x), x.DisplayName)).ToList();
+            return ( await PeerFinder.FindAllPeersAsync() ).Select(
+                    x => new Flint.Core.Pebble( new PebbleBluetoothConnection( x ), x.DisplayName ) ).ToList();
         }
 
         private class PebbleBluetoothConnection : IBluetoothConnection
         {
-            public event EventHandler<BytesReceivedEventArgs> DataReceived;
+            private const uint BUFFER_SIZE = 256;
+
+            public event EventHandler<BytesReceivedEventArgs> DataReceived = delegate { };
 
             private readonly PeerInformation _PeerInformation;
             private readonly StreamSocket _socket = new StreamSocket();
+            private DataReader _Reader;
 
-            public PebbleBluetoothConnection(PeerInformation peerInformation)
+            public PebbleBluetoothConnection( PeerInformation peerInformation )
             {
-                if (peerInformation == null) throw new ArgumentNullException("peerInformation");
+                if ( peerInformation == null ) throw new ArgumentNullException( "peerInformation" );
                 _PeerInformation = peerInformation;
             }
 
@@ -46,23 +46,36 @@ namespace Pebble.WP.Bluetooth
                 try
                 {
                     await _socket.ConnectAsync( _PeerInformation.HostName, "1" );
-
-                    Debug.WriteLine("Success");
+                    _Reader = new DataReader( _socket.InputStream )
+                    {
+                        ByteOrder = ByteOrder.LittleEndian,
+                        InputStreamOptions = InputStreamOptions.Partial
+                    };
                 }
-                catch (Exception e)
+                catch ( Exception e )
                 {
-                    Debug.WriteLine(e.ToString());
+                    Debug.WriteLine( e.ToString() );
                 }
             }
 
             public void Close()
             {
                 _socket.Dispose();
+                _Reader = null;
             }
 
-            public void Write(byte[] data)
+            public async void Write( byte[] data )
             {
-                _socket.OutputStream.WriteAsync(data.AsBuffer());
+                await _socket.OutputStream.WriteAsync( data.AsBuffer() );
+                uint loaded = await _Reader.LoadAsync( BUFFER_SIZE );
+                if ( loaded > 0 )
+                {
+                    IBuffer buffer = _Reader.ReadBuffer( loaded );
+                    if ( buffer.Length > 0 )
+                    {
+                        DataReceived( this, new BytesReceivedEventArgs( buffer.ToArray() ) );
+                    }
+                }
             }
         }
     }

@@ -19,7 +19,7 @@ namespace Pebble.WP.ViewModel
         {
             if (pebble == null) throw new ArgumentNullException("pebble");
 
-            if (pebble.Alive)
+            if (pebble.IsAlive)
             {
                 TimeResponse timeResponse = await pebble.GetTimeAsync();
                 if (timeResponse.Success)

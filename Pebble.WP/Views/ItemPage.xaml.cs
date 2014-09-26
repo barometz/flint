@@ -1,12 +1,10 @@
-﻿using Pebble.WP.Common;
-using Pebble.WP.Data;
-using System;
+﻿using System;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
+using Pebble.WP.Common;
+using Pebble.WP.Data;
 
-// The Pivot Application template is documented at http://go.microsoft.com/fwlink/?LinkID=391641
-
-namespace Pebble.WP
+namespace Pebble.WP.Views
 {
     /// <summary>
     /// A page that displays details for a single item within a group.

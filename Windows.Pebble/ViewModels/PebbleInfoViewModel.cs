@@ -104,7 +104,7 @@ namespace Windows.Pebble.ViewModels
                     bundle.Load(openDialog.OpenFile(), zip);
                 }
 
-                if (_pebble.Alive == false)
+                if (_pebble.IsAlive == false)
                     return;
                 await _pebble.InstallFirmwareAsync(bundle);
             }
@@ -112,7 +112,7 @@ namespace Windows.Pebble.ViewModels
 
         private async Task LoadPebbleTimeAsync()
         {
-            if ( _pebble != null && _pebble.Alive )
+            if ( _pebble != null && _pebble.IsAlive )
             {
                 TimeResponse timeResult = await _pebble.GetTimeAsync();
                 if ( timeResult.Success )
@@ -131,7 +131,7 @@ namespace Windows.Pebble.ViewModels
 
         private async Task LoadFirmwareAsync()
         {
-            if ( _pebble == null || _pebble.Alive == false )
+            if ( _pebble == null || _pebble.IsAlive == false )
                 return;
 
             FirmwareVersionResponse firmwareResponse = await _pebble.GetFirmwareVersionAsync();

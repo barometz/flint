@@ -1,13 +1,13 @@
-﻿using Pebble.WP.Common;
-using Pebble.WP.Data;
-using Pebble.WP.ViewModel;
-using System;
+﻿using System;
 using Windows.ApplicationModel.Resources;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
+using Pebble.WP.Common;
+using Pebble.WP.Data;
+using Pebble.WP.ViewModel;
 
-namespace Pebble.WP
+namespace Pebble.WP.Views
 {
     public sealed partial class PivotPage
     {
@@ -141,7 +141,8 @@ namespace Pebble.WP
             var pebble = e.Parameter as Flint.Core.Pebble;
             if (pebble != null)
             {
-                await ViewModel.SetPebbleAsync(pebble);                
+                await ViewModel.SetPebbleAsync(pebble);   
+                
             }
 
             _NavigationHelper.OnNavigatedTo(e);
