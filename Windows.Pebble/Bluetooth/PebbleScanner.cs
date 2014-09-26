@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 using System.Management;
+using System.Threading.Tasks;
 using Flint.Core;
 using InTheHand.Net.Sockets;
 
@@ -48,9 +49,10 @@ namespace Windows.Pebble.Bluetooth
                 _SerialPort.DataReceived += SerialPortOnDataReceived;
             }
 
-            public void Open()
+            public Task OpenAsync()
             {
                 _SerialPort.Open();
+                return Task.FromResult((object)null);
             }
 
             public void Close()

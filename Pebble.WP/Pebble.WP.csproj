@@ -150,6 +150,11 @@
       <Name>Flint.Core</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="InTheHand.Phone.Bluetooth">
+      <HintPath>..\..\32feet\InTheHand.Phone.Bluetooth\InTheHand.Phone.Bluetooth\Bin\Debug\InTheHand.Phone.Bluetooth.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
     <VisualStudioVersion>12.0</VisualStudioVersion>
   </PropertyGroup>

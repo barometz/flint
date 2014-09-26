@@ -136,9 +136,13 @@ namespace Pebble.WP
         /// </summary>
         /// <param name="e">Provides data for navigation methods and event
         /// handlers that cannot cancel the navigation request.</param>
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             var pebble = e.Parameter as Flint.Core.Pebble;
+            if (pebble != null)
+            {
+                await ViewModel.SetPebbleAsync(pebble);                
+            }
 
             _NavigationHelper.OnNavigatedTo(e);
         }

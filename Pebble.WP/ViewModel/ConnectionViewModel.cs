@@ -5,7 +5,6 @@ using System.Windows.Input;
 using Windows.UI.Xaml.Controls;
 using Pebble.WP.Bluetooth;
 using Pebble.WP.Common;
-using Pebble = Flint.Core.Pebble;
 
 namespace Pebble.WP.ViewModel
 {
@@ -50,6 +49,9 @@ namespace Pebble.WP.ViewModel
             _pebbles.Clear();
             foreach (var pebble in await PebbleScanner.DetectPebbles())
                 _pebbles.Add(pebble);
+
+            if (_pebbles.Count == 1)
+                SelectedPebble = _pebbles[0];
         }
 
         private void OnConnect()

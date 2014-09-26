@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Flint.Core
 {
@@ -24,7 +25,7 @@ namespace Flint.Core
         {
             _blueToothConnection = connection;
 
-            _blueToothConnection.DataReceived += serialPortDataReceived;
+            _blueToothConnection.DataReceived += SerialPortDataReceived;
             //TODO: Push this on to the clients.... do we even care if there is an error?
             //_BlueToothPort.ErrorReceived += serialPortErrorReceived;
         }
@@ -38,9 +39,9 @@ namespace Flint.Core
 
         /// <summary> Connect to the Pebble. </summary>
         /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
-        public void Connect()
+        public async Task ConnectAsync()
         {
-            _blueToothConnection.Open();
+            await _blueToothConnection.OpenAsync();
         }
 
         public void Close()
@@ -75,7 +76,7 @@ namespace Flint.Core
             _blueToothConnection.Write(Util.CombineArrays(payloadSize, endPoint, payload));
         }
         
-        private void serialPortDataReceived( object sender, BytesReceivedEventArgs e )
+        private void SerialPortDataReceived( object sender, BytesReceivedEventArgs e )
         {
             lock ( _byteStream )
             {

@@ -152,7 +152,7 @@ namespace Flint.Core
             using (IResponseTransaction<PhoneVersionResponse> responseTransaction =
                     _responseManager.GetTransaction<PhoneVersionResponse>())
             {
-                _PebbleProt.Connect();
+                await _PebbleProt.ConnectAsync();
 
                 response = responseTransaction.AwaitResponse(ResponseTimeout);
             }
