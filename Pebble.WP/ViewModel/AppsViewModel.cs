@@ -1,5 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using System.Windows.Input;
+using Pebble.WP.Common;
 using PebbleWatch = Flint.Core.Pebble;
 using PebbleApp = Flint.Core.App;
 
@@ -7,12 +9,20 @@ namespace Pebble.WP.ViewModel
 {
     public class AppsViewModel : PebbleViewModel
     {
+        private readonly ICommand _uninstallAppCommand;
+
         public AppsViewModel()
         {
+            _uninstallAppCommand = new RelayCommand<PebbleApp?>(OnUninstallApp);
             Apps = new ObservableCollection<PebbleApp>();
         }
 
-        public ObservableCollection<PebbleApp> Apps { get; private set; } 
+        public ObservableCollection<PebbleApp> Apps { get; private set; }
+
+        public ICommand UninstallCommand
+        {
+            get { return _uninstallAppCommand; }
+        }
 
         public override async Task RefreshAsync()
         {
@@ -32,6 +42,17 @@ namespace Pebble.WP.ViewModel
             }
         }
 
+        private async void OnUninstallApp( PebbleApp? app )
+        {
+            if (app == null)
+                return;
+
+            var response = await Pebble.RemoveAppAsync(app.Value);
+            if (response.Success)
+            {
+                await LoadAppsAsync();
+            }
+        }
         
     }
 }

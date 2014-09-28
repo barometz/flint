@@ -4,7 +4,6 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using Pebble.WP.Common;
-using Pebble.WP.Data;
 using Pebble.WP.ViewModel;
 
 namespace Pebble.WP.Views
@@ -27,7 +26,7 @@ namespace Pebble.WP.Views
         }
 
         /// <summary>
-        /// Gets the <see cref="NavigationHelper"/> associated with this <see cref="Page"/>.
+        /// Gets the <see cref="NavigationHelper"/> associated with this <see cref="RootPage"/>.
         /// </summary>
         public NavigationHelper NavigationHelper
         {
@@ -35,7 +34,7 @@ namespace Pebble.WP.Views
         }
 
         /// <summary>
-        /// Gets the view model for this <see cref="Page"/>.
+        /// Gets the view model for this <see cref="RootPage"/>.
         /// This can be changed to a strongly typed view model.
         /// </summary>
         public PivotPageViewModel ViewModel

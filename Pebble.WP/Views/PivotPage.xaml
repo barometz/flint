@@ -4,9 +4,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:utilities="using:Pebble.WP.Utilities"
     mc:Ignorable="d"
     DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    Name="RootPage">
     <Page.Transitions>
         <TransitionCollection>
             <NavigationThemeTransition>
@@ -31,33 +33,6 @@
                         <Button Content="Sync Now" Command="{Binding SetTimeCommand}" />
                     </StackPanel>
                 </Grid>
-
-                <!--<ListView
-                    ItemsSource="{Binding Items}"
-                    IsItemClickEnabled="True"
-                    ItemClick="ItemView_ItemClick"
-                    ContinuumNavigationTransitionInfo.ExitElementContainer="True">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,0,0,9.5">
-                                <TextBlock
-                                    Text="{Binding Title}"
-                                    TextWrapping="Wrap"
-                                    Pivot.SlideInAnimationGroup="1"
-                                    CommonNavigationTransitionInfo.IsStaggerElement="True"
-                                    Style="{ThemeResource ListViewItemTextBlockStyle}"
-                                    Margin="0,0,19,0"/>
-                                <TextBlock
-                                    Text="{Binding Description}"
-                                    TextWrapping="WrapWholeWords"
-                                    Pivot.SlideInAnimationGroup="2" 
-                                    CommonNavigationTransitionInfo.IsStaggerElement="True" 
-                                    Style="{ThemeResource ListViewItemContentTextBlockStyle}"
-                                    Margin="0,0,19,0"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>-->
             </PivotItem>
 
             <PivotItem
@@ -74,18 +49,25 @@
                     ContinuumNavigationTransitionInfo.ExitElementContainer="True">
                     <ListView.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="0,0,0,9.5">
+                            <StackPanel >
+                                <utilities:MenuFlyoutService.MenuFlyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="uninstall" Command="{Binding ViewModel.Apps.UninstallCommand, ElementName=RootPage}"
+                                                        CommandParameter="{Binding}"/>
+                                    </MenuFlyout>
+                                </utilities:MenuFlyoutService.MenuFlyout>
                                 <TextBlock
                                     Pivot.SlideInAnimationGroup="1"
                                     CommonNavigationTransitionInfo.IsStaggerElement="True"
-                                    Style="{StaticResource ListViewItemTextBlockStyle}">
+                                    Style="{StaticResource ListViewItemTextBlockStyle}"
+                                    Margin="0,0,0,9.5">
                                     <Run Text="{Binding Name}" />
                                     <LineBreak />
                                     <Run Text="Version:"/>
                                     <Run Text="{Binding Version}"/>
                                     <LineBreak />
-                                    <Run Text="By:" FontWeight="Thin"/>
-                                    <Run Text="{Binding Company}" FontWeight="Light"/>
+                                    <Run Text="By:"/>
+                                    <Run Text="{Binding Company}" />
                                 </TextBlock>
                             </StackPanel>
                         </DataTemplate>

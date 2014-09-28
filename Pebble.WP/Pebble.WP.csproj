@@ -103,6 +103,7 @@
     <Compile Include="Common\RelayCommand.cs" />
     <Compile Include="Common\SuspensionManager.cs" />
     <Compile Include="DataModel\SampleDataSource.cs" />
+    <Compile Include="Utilities\MenuFlyoutService.cs" />
     <Compile Include="Utilities\StreamWatcher.cs" />
     <Compile Include="ViewModel\AppsViewModel.cs" />
     <Compile Include="ViewModel\PebbleViewModel.cs" />
@@ -152,11 +153,6 @@
       <Project>{c5272f8f-cea0-4514-a911-9f62e5b53547}</Project>
       <Name>Flint.Core</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="InTheHand.Phone.Bluetooth">
-      <HintPath>..\..\32feet\InTheHand.Phone.Bluetooth\InTheHand.Phone.Bluetooth\Bin\Debug\InTheHand.Phone.Bluetooth.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '12.0' ">
     <VisualStudioVersion>12.0</VisualStudioVersion>
