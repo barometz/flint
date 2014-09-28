@@ -104,6 +104,8 @@
     <Compile Include="Common\SuspensionManager.cs" />
     <Compile Include="DataModel\SampleDataSource.cs" />
     <Compile Include="Utilities\StreamWatcher.cs" />
+    <Compile Include="ViewModel\AppsViewModel.cs" />
+    <Compile Include="ViewModel\PebbleViewModel.cs" />
     <Compile Include="Views\ItemPage.xaml.cs">
       <DependentUpon>ItemPage.xaml</DependentUpon>
     </Compile>

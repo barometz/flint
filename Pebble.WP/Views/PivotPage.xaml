@@ -64,10 +64,10 @@
                 x:Uid="PivotItem2"
                 Margin="19,14.5,0,0"
                 Header="apps"
-                DataContext="{Binding SecondGroup}">
+                DataContext="{Binding Apps}">
                 <!--Double line list no text wrapping-->
                 <ListView
-                    ItemsSource="{Binding Items}"
+                    ItemsSource="{Binding Apps}"
                     IsItemClickEnabled="True"
                     ItemClick="ItemView_ItemClick"
                     Loaded="SecondPivot_Loaded"
@@ -76,15 +76,17 @@
                         <DataTemplate>
                             <StackPanel Margin="0,0,0,9.5">
                                 <TextBlock
-                                    Text="{Binding Title}"
                                     Pivot.SlideInAnimationGroup="1"
                                     CommonNavigationTransitionInfo.IsStaggerElement="True"
-                                    Style="{StaticResource ListViewItemTextBlockStyle}"/>
-                                <TextBlock
-                                    Text="{Binding Description}"
-                                    Pivot.SlideInAnimationGroup="2"
-                                    CommonNavigationTransitionInfo.IsStaggerElement="True"
-                                    Style="{StaticResource ListViewItemContentTextBlockStyle}"/>
+                                    Style="{StaticResource ListViewItemTextBlockStyle}">
+                                    <Run Text="{Binding Name}" />
+                                    <LineBreak />
+                                    <Run Text="Version:"/>
+                                    <Run Text="{Binding Version}"/>
+                                    <LineBreak />
+                                    <Run Text="By:" FontWeight="Thin"/>
+                                    <Run Text="{Binding Company}" FontWeight="Light"/>
+                                </TextBlock>
                             </StackPanel>
                         </DataTemplate>
                     </ListView.ItemTemplate>
@@ -95,11 +97,12 @@
 
     <Page.BottomAppBar>
         <CommandBar>
-            <AppBarButton x:Uid="AddAppBarButton" x:Name="AddAppBarButton" Label="add" Icon="Add" Click="AddAppBarButton_Click" />
-            <CommandBar.SecondaryCommands>
+            <!--<AppBarButton x:Uid="AddAppBarButton" x:Name="AddAppBarButton" Label="add" Icon="Add" Click="AddAppBarButton_Click" />-->
+            <AppBarButton x:Uid="RefreshAppBarButton" Label="refresh" Icon="Refresh" Command="{Binding RefreshCommand}"/>
+            <!--<CommandBar.SecondaryCommands>
                 <AppBarButton x:Uid="SecondaryButton1" x:Name="SecondaryButton1" Label="secondary command 1" />
                 <AppBarButton x:Uid="SecondaryButton2" x:Name="SecondaryButton2" Label="secondary command 2" />
-            </CommandBar.SecondaryCommands>
+            </CommandBar.SecondaryCommands>-->
         </CommandBar>
     </Page.BottomAppBar>
 </Page>

@@ -6,11 +6,9 @@ using Pebble.WP.Common;
 
 namespace Pebble.WP.ViewModel
 {
-    public class InfoViewModel : ViewModelBase
+    public class InfoViewModel : PebbleViewModel
     {
         private readonly ICommand _setTimeCommand;
-
-        private Flint.Core.Pebble Pebble { get; set; }
 
         public InfoViewModel()
         {
@@ -30,12 +28,8 @@ namespace Pebble.WP.ViewModel
             set { Set(ref _timeDisplay, value); }
         }
 
-        public async Task SetPebbleAsync(Flint.Core.Pebble pebble)
+        public override async Task RefreshAsync()
         {
-            if (pebble == null) throw new ArgumentNullException("pebble");
-            
-            Pebble = pebble;
-
             await GetPebbleTimeAsyc();
         }
 
