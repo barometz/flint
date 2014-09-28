@@ -26,14 +26,9 @@
                 DataContext="{Binding Info}"
                 CommonNavigationTransitionInfo.IsStaggerElement="True">
                 <Grid>
-                    <StackPanel>
-                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}">
-                            <Run x:Uid="WatchTime" Text="Watch time:" />
-                            <Run Text="{Binding WatchTime}" />
-                            <LineBreak />
-                            <Run x:Uid="PhoneTime" Text="Phone time:" />
-                            <Run Text="{Binding PhoneTime}" />
-                        </TextBlock>
+                    <StackPanel Margin="5">
+                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="{Binding TimeDisplay}"/>
+                        <Button Content="Sync Now" Command="{Binding SetTimeCommand}" />
                     </StackPanel>
                 </Grid>
 

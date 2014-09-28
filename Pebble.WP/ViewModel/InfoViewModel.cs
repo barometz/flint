@@ -1,29 +1,75 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Flint.Core.Responses;
+using Pebble.WP.Common;
 
 namespace Pebble.WP.ViewModel
 {
     public class InfoViewModel : ViewModelBase
     {
-        private const string TIME_FORMAT = "";
+        private readonly ICommand _setTimeCommand;
 
-        private string _watchTime;
-        public string WatchTime
+        private Flint.Core.Pebble Pebble { get; set; }
+
+        public InfoViewModel()
         {
-            get { return _watchTime; }
-            set { Set(ref _watchTime, value); }
+            _setTimeCommand = new RelayCommand(OnSetTime);
+            TimeDisplay = "Waiting for Pebble";
+        }
+
+        public ICommand SetTimeCommand
+        {
+            get { return _setTimeCommand; }
+        }
+
+        private string _timeDisplay;
+        public string TimeDisplay
+        {
+            get { return _timeDisplay; }
+            set { Set(ref _timeDisplay, value); }
         }
 
         public async Task SetPebbleAsync(Flint.Core.Pebble pebble)
         {
             if (pebble == null) throw new ArgumentNullException("pebble");
+            
+            Pebble = pebble;
 
-            if (pebble.IsAlive)
+            await GetPebbleTimeAsyc();
+        }
+
+        private async void OnSetTime()
+        {
+            if (Pebble != null)
             {
-                TimeResponse timeResponse = await pebble.GetTimeAsync();
-                if (timeResponse.Success)
-                    WatchTime = timeResponse.Time.ToString("G");
+                TimeDisplay = "Setting Pebble time";
+                await Pebble.SetTimeAsync(DateTime.Now);
+                await GetPebbleTimeAsyc();
+            }
+        }
+
+        private async Task GetPebbleTimeAsyc()
+        {
+            TimeDisplay = "Getting curret Pebble time";
+            TimeResponse timeResponse = await Pebble.GetTimeAsync();
+            var current = DateTime.Now;
+            if ( timeResponse.Success )
+            {
+                var differece = timeResponse.Time - current;
+                if (differece < TimeSpan.FromSeconds(2))
+                {
+                    TimeDisplay = "Pebble time is in sync with the phone";
+                }
+                else
+                {
+                    TimeDisplay = string.Format("Pebble is {0} {1} than the phone", differece.ToString(@"h\:mm\:ss"),
+                        timeResponse.Time > current ? "faster" : "slower");
+                }
+            }
+            else
+            {
+                TimeDisplay = "Failed to get time from Pebble: " + timeResponse.ErrorMessage;
             }
         }
     }

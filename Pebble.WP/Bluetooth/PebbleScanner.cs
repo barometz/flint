@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Windows.Networking.Proximity;
 using Windows.Networking.Sockets;
 using Windows.Storage.Streams;
+using Pebble.WP.Utilities;
 
 namespace Pebble.WP.Bluetooth
 {
@@ -27,13 +28,11 @@ namespace Pebble.WP.Bluetooth
 
         private class PebbleBluetoothConnection : IBluetoothConnection
         {
-            private const uint BUFFER_SIZE = 256;
-
             public event EventHandler<BytesReceivedEventArgs> DataReceived = delegate { };
 
             private readonly PeerInformation _PeerInformation;
             private readonly StreamSocket _socket = new StreamSocket();
-            private DataReader _Reader;
+            private StreamWatcher _streamWatcher;
 
             public PebbleBluetoothConnection( PeerInformation peerInformation )
             {
@@ -46,11 +45,8 @@ namespace Pebble.WP.Bluetooth
                 try
                 {
                     await _socket.ConnectAsync( _PeerInformation.HostName, "1" );
-                    _Reader = new DataReader( _socket.InputStream )
-                    {
-                        ByteOrder = ByteOrder.LittleEndian,
-                        InputStreamOptions = InputStreamOptions.Partial
-                    };
+                    _streamWatcher = new StreamWatcher( _socket.InputStream );
+                    _streamWatcher.DataAvailible += StreamWatcherOnDataAvailible;
                 }
                 catch ( Exception e )
                 {
@@ -58,24 +54,23 @@ namespace Pebble.WP.Bluetooth
                 }
             }
 
+            private void StreamWatcherOnDataAvailible( object sender, DataAvailibleEventArgs e )
+            {
+                DataReceived( this, new BytesReceivedEventArgs( e.Data ) );
+            }
+
             public void Close()
             {
+                _streamWatcher.DataAvailible -= StreamWatcherOnDataAvailible;
+                _streamWatcher.Stop();
+                _streamWatcher = null;
+
                 _socket.Dispose();
-                _Reader = null;
             }
 
             public async void Write( byte[] data )
             {
                 await _socket.OutputStream.WriteAsync( data.AsBuffer() );
-                uint loaded = await _Reader.LoadAsync( BUFFER_SIZE );
-                if ( loaded > 0 )
-                {
-                    IBuffer buffer = _Reader.ReadBuffer( loaded );
-                    if ( buffer.Length > 0 )
-                    {
-                        DataReceived( this, new BytesReceivedEventArgs( buffer.ToArray() ) );
-                    }
-                }
             }
         }
     }
