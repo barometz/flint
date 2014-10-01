@@ -75,6 +75,12 @@ namespace Windows.Pebble.Bluetooth
                     DataReceived(this, new BytesReceivedEventArgs(bytes));
                 }
             }
+
+            public void Dispose()
+            {
+                if (_SerialPort != null)
+                    _SerialPort.Dispose();
+            }
         }
     }
 }

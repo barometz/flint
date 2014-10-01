@@ -72,6 +72,12 @@ namespace Pebble.WP.Bluetooth
             {
                 await _socket.OutputStream.WriteAsync( data.AsBuffer() );
             }
+
+            public void Dispose()
+            {
+                if (_socket != null)
+                    _socket.Dispose();                    
+            }
         }
     }
 }

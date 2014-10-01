@@ -5,7 +5,7 @@ using Ionic.Zip;
 
 namespace Windows.Pebble.Zip
 {
-    public class Zip : IZip
+    public sealed class Zip : IZip
     {
         private ZipFile _zipFile;
         private Stream _zipStream;

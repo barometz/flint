@@ -4,7 +4,7 @@ using Ionic.Zip;
 
 namespace Flint.Core.Tests
 {
-    public class ZipImplementation : IZip
+    public sealed class ZipImplementation : IZip
     {
         private ZipFile _zipFile;
 

@@ -6,27 +6,19 @@ namespace Windows.Pebble.Util
     //Based on an example from: http://stackoverflow.com/questions/18839510/virtualkeycode-media-play-pause-not-working
     public static class NativeMethods
     {
-        [DllImport( "user32.dll" )]
-        private static extern IntPtr SendMessageW( IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam );
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessageW(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 
         private const int WM_APPCOMMAND = 0x0319;
 
-        private static readonly IntPtr _windowHandle;
-        
-        static NativeMethods()
-        {
-            _windowHandle = App.MainWindowHandle;
-            if (_windowHandle == IntPtr.Zero)
-                throw new Exception("MainWindowHandle not set");
-        }
 
-        public static void SendMessage( AppCommandCode command )
+        public static void SendMessage(AppCommandCode command)
         {
             if (command == AppCommandCode.None)
                 throw new ArgumentException("A command is required", "command");
 
-            var commandId = (IntPtr)( (int) command << 16 );
-            SendMessageW( _windowHandle, WM_APPCOMMAND, _windowHandle, commandId);
+            var commandId = (IntPtr)((int)command << 16);
+            SendMessageW(App.MainWindowHandle, WM_APPCOMMAND, App.MainWindowHandle, commandId);
         }
     }
 

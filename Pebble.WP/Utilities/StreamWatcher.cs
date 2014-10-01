@@ -5,7 +5,7 @@ using Windows.Storage.Streams;
 
 namespace Pebble.WP.Utilities
 {
-    public class StreamWatcher
+    public sealed class StreamWatcher : IDisposable
     {
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly DataReader _reader;
@@ -54,6 +54,15 @@ namespace Pebble.WP.Utilities
         public void Stop()
         {
             _tokenSource.Cancel();
+        }
+
+        public void Dispose()
+        {
+            if (_reader != null)
+                _reader.Dispose();
+
+            if (_tokenSource != null)
+                _tokenSource.Dispose();
         }
     }
 
