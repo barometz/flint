@@ -1,7 +1,8 @@
-﻿namespace Flint.Core
+﻿using System;
+namespace Flint.Core
 {
     //TODO: Better namespace
-    public class BytesReceivedEventArgs
+    public class BytesReceivedEventArgs : EventArgs
     {
         public BytesReceivedEventArgs()
             : this ( new byte[0] )
