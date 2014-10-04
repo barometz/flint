@@ -3,22 +3,6 @@ using System.IO.Ports;
 
 namespace flint
 {
-    /// <summary> Args for the event of a message being received. 
-    /// Possibly a little excessive as the relevant event will most likely have 
-    /// exactly one subscriber, but it's a small effort.
-    /// </summary>
-    internal class RawMessageReceivedEventArgs : EventArgs
-    {
-        public UInt16 Endpoint { get; private set; }
-        public byte[] Payload { get; private set; }
-
-        public RawMessageReceivedEventArgs(UInt16 endpoint, byte[] payload)
-        {
-            this.Endpoint = endpoint;
-            this.Payload = payload;
-        }
-    }
-
     /// <summary> Handles the basic protocol structure for Pebble communication.
     /// Essentially handles the SerialPort and translates the stream to 
     /// endpoint,payload pairs and vv.  Does and should not handle anything 
@@ -26,46 +10,47 @@ namespace flint
     /// </summary>
     internal class PebbleProtocol
     {
-        // TODO: Exception handling
-        public event EventHandler<RawMessageReceivedEventArgs> RawMessageReceived;
-        public event SerialErrorReceivedEventHandler SerialErrorReceived;
+        public event EventHandler<RawMessageReceivedEventArgs> RawMessageReceived = delegate { };
+        public event SerialErrorReceivedEventHandler SerialErrorReceived = delegate { };
 
-        public String Port { get; private set; }
+        public string Port 
+        {
+            get { return _SerialPort.PortName; }
+        }
 
-        enum waitingStates
+        private enum WaitingStates
         {
             NewMessage,
             Payload
         }
-        waitingStates waitingState;
+        private WaitingStates _WaitingState;
 
-        SerialPort serialPort;
-        UInt16 currentPayloadSize = 0;
-        UInt16 currentEndpoint = 0;
+        private readonly SerialPort _SerialPort;
+        private ushort _CurrentPayloadSize;
+        private ushort _CurrentEndpoint;
 
         /// <summary> Create a new Pebble connection </summary>
         /// <param name="port"></param>
-        public PebbleProtocol(String port)
+        public PebbleProtocol( string port )
         {
-            this.Port = port;
-            this.serialPort = new SerialPort(port, 19200);
-            this.serialPort.ReadTimeout = 500;
-            this.serialPort.WriteTimeout = 500;
+            _SerialPort = new SerialPort( port, 19200 );
+            _SerialPort.ReadTimeout = 500;
+            _SerialPort.WriteTimeout = 500;
 
-            serialPort.DataReceived += serialPort_DataReceived;
-            serialPort.ErrorReceived += serialPort_ErrorReceived;
+            _SerialPort.DataReceived += serialPortDataReceived;
+            _SerialPort.ErrorReceived += serialPortErrorReceived;
         }
 
         /// <summary> Connect to the Pebble. </summary>
         /// <exception cref="System.IO.IOException">Passed on when no connection can be made.</exception>
         public void Connect()
         {
-            serialPort.Open();
+            _SerialPort.Open();
         }
 
         public void Close()
         {
-            serialPort.Close();
+            _SerialPort.Close();
         }
 
         /// <summary> Send a message to the connected Pebble.  
@@ -74,40 +59,26 @@ namespace flint
         /// <param name="endpoint"></param>
         /// <param name="payload"></param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the payload is too large.</exception>
-        public void sendMessage(UInt16 endpoint, byte[] payload)
+        public void SendMessage( ushort endpoint, byte[] payload )
         {
-            if (payload.Length > 2048)
+            if ( payload.Length > 2048 )
             {
-                throw new ArgumentOutOfRangeException("payload",
-                    "The payload should not be more than 2048 bytes");
+                throw new ArgumentOutOfRangeException( "payload",
+                                                      "The payload should not be more than 2048 bytes" );
             }
 
-            UInt16 length = Convert.ToUInt16(payload.Length);
-            byte[] payloadSize = BitConverter.GetBytes(length);
-            byte[] _endpoint = BitConverter.GetBytes(endpoint);
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(payloadSize);
-                Array.Reverse(_endpoint);
-            }
-#if DEBUG
-            Console.WriteLine("Sending message..");
-            Console.WriteLine("\tPLS: " + BitConverter.ToString(payloadSize));
-            Console.WriteLine("\tEP:  " + BitConverter.ToString(_endpoint));
-            Console.WriteLine("\tPL:  " + BitConverter.ToString(payload));
-#endif
-            serialPort.Write(payloadSize, 0, 2);
-            serialPort.Write(_endpoint, 0, 2);
-            serialPort.Write(payload, 0, length);
-        }
+            UInt16 length = Convert.ToUInt16( payload.Length );
+            byte[] payloadSize = Util.GetBytes( length );
+            byte[] endPoint = Util.GetBytes( endpoint );
+            
+            //Debug.WriteLine( "Sending message.." );
+            //Debug.WriteLine( "\tPLS: " + BitConverter.ToString( payloadSize ) );
+            //Debug.WriteLine( "\tEP:  " + BitConverter.ToString( _endPoint ) );
+            //Debug.WriteLine( "\tPL:  " + BitConverter.ToString( payload ) );
 
-        void RaiseRawMessageReceived(UInt16 endpoint, byte[] payload)
-        {
-            var temp = RawMessageReceived;
-            if (temp != null)
-            {
-                temp(this, new RawMessageReceivedEventArgs(endpoint, payload));
-            }
+            _SerialPort.Write( payloadSize, 0, 2 );
+            _SerialPort.Write( endPoint, 0, 2 );
+            _SerialPort.Write( payload, 0, length );
         }
 
         /// <summary> Serial error handler.  Passes stuff on to the next subscriber.
@@ -118,19 +89,15 @@ namespace flint
         /// </remarks>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void serialPort_ErrorReceived(object sender, SerialErrorReceivedEventArgs e)
+        private void serialPortErrorReceived( object sender, SerialErrorReceivedEventArgs e )
         {
-            var temp = SerialErrorReceived;
-            if (temp != null)
-            {
-                temp(this, e);
-            }
+            SerialErrorReceived( this, e );
         }
 
-        void serialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        private void serialPortDataReceived( object sender, SerialDataReceivedEventArgs e )
         {
             // Keep reading until there's no complete chunk to be read.
-            while (readAndProcess())
+            while ( readAndProcess() )
             {
             }
         }
@@ -145,52 +112,51 @@ namespace flint
         /// <returns>
         /// True if there was enough data to read, otherwise false.
         /// </returns>
-        bool readAndProcess()
+        private bool readAndProcess()
         {
-            byte[] endpoint = new byte[2];
-            byte[] payloadSize = new byte[2];
-            switch (waitingState)
+            var endpoint = new byte[2];
+            var payloadSize = new byte[2];
+            switch ( _WaitingState )
             {
-                case waitingStates.NewMessage:
-                    if (serialPort.BytesToRead >= 4)
+                case WaitingStates.NewMessage:
+                    if ( _SerialPort.BytesToRead >= 4 )
                     {
                         // Read new payload size and endpoint
-                        serialPort.Read(payloadSize, 0, 2);
-                        serialPort.Read(endpoint, 0, 2);
-                        if (BitConverter.IsLittleEndian)
+                        _SerialPort.Read( payloadSize, 0, 2 );
+                        _SerialPort.Read( endpoint, 0, 2 );
+                        if ( BitConverter.IsLittleEndian )
                         {
                             // Data is transmitted big-endian, so flip.
-                            Array.Reverse(payloadSize);
-                            Array.Reverse(endpoint);
+                            Array.Reverse( payloadSize );
+                            Array.Reverse( endpoint );
                         }
-                        currentPayloadSize = BitConverter.ToUInt16(payloadSize, 0);
-                        currentEndpoint = BitConverter.ToUInt16(endpoint, 0);
-#if DEBUG
-                        Console.WriteLine("Message metadata received:");
-                        Console.WriteLine("\tPLS: " + currentPayloadSize.ToString());
-                        Console.WriteLine("\tEP:  " + currentEndpoint.ToString());
-#endif
-                        waitingState = waitingStates.Payload;
+                        _CurrentPayloadSize = BitConverter.ToUInt16( payloadSize, 0 );
+                        _CurrentEndpoint = BitConverter.ToUInt16( endpoint, 0 );
+
+                        //Debug.WriteLine( "Message metadata received:" );
+                        //Debug.WriteLine( "\tPLS: " + _CurrentPayloadSize.ToString() );
+                        //Debug.WriteLine( "\tEP:  " + _CurrentEndpoint.ToString() );
+
+                        _WaitingState = WaitingStates.Payload;
                         return true;
                     }
                     break;
-                case waitingStates.Payload:
-                    if (serialPort.BytesToRead >= currentPayloadSize)
+                case WaitingStates.Payload:
+                    if ( _SerialPort.BytesToRead >= _CurrentPayloadSize )
                     {
                         // All of the payload's been received, so read it.
-                        byte[] buffer = new byte[currentPayloadSize];
-                        serialPort.Read(buffer, 0, currentPayloadSize);
-                        RaiseRawMessageReceived(currentEndpoint, buffer);
+                        var buffer = new byte[_CurrentPayloadSize];
+                        _SerialPort.Read( buffer, 0, _CurrentPayloadSize );
+                        RawMessageReceived( this, new RawMessageReceivedEventArgs( _CurrentEndpoint, buffer ) );
                         // Reset state
-                        waitingState = waitingStates.NewMessage;
-                        currentEndpoint = 0;
-                        currentPayloadSize = 0;
+                        _WaitingState = WaitingStates.NewMessage;
+                        _CurrentEndpoint = 0;
+                        _CurrentPayloadSize = 0;
                         return true;
                     }
                     break;
             }
-            // If this hasn't returned yet there wasn't anything interesting to
-            // read.
+            // If this hasn't returned yet there wasn't anything interesting to read.
             return false;
         }
     }

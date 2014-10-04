@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>flint</RootNamespace>
     <AssemblyName>flint</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -47,8 +47,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>.\InTheHand.Net.Personal.dll</HintPath>
     </Reference>
-    <Reference Include="Ionic.Zip">
-      <HintPath>.\Ionic.Zip.dll</HintPath>
+    <Reference Include="Ionic.Zip, Version=1.9.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\DotNetZip.1.9.2\lib\net20\Ionic.Zip.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -62,21 +63,38 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppBank.cs" />
-    <Compile Include="EndpointSync.cs" />
+    <Compile Include="Enums.cs" />
+    <Compile Include="ProgressValue.cs" />
+    <Compile Include="ResponseManager.cs" />
+    <Compile Include="Responses\AppBankInstallResponse.cs" />
+    <Compile Include="Responses\AppbankResponse.cs" />
+    <Compile Include="Responses\EndpointAttribute.cs" />
+    <Compile Include="Responses\FirmwareVersionResponse.cs" />
+    <Compile Include="Responses\MusicControlResponse.cs" />
+    <Compile Include="Responses\PhoneVersionResponse.cs" />
+    <Compile Include="Responses\PutBytesResponse.cs" />
+    <Compile Include="Responses\ResponseBase.cs" />
+    <Compile Include="Crc32.cs" />
+    <Compile Include="FirmwareVersion.cs" />
+    <Compile Include="Responses\IResponse.cs" />
     <Compile Include="Pebble.cs" />
     <Compile Include="PebbleBundle.cs" />
-    <Compile Include="PebbleEventArgs.cs" />
     <Compile Include="PebbleException.cs" />
+    <Compile Include="PebbleNotFoundException.cs" />
     <Compile Include="PebbleProtocol.cs" />
+    <Compile Include="Responses\PingResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="PutBytes.cs" />
+    <Compile Include="RawMessageReceivedEventArgs.cs" />
+    <Compile Include="Responses\TimeResponse.cs" />
     <Compile Include="Util.cs" />
+    <Compile Include="UUID.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="flint.ico" />
     <None Include="LICENSE.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

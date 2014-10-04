@@ -1,28 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace flint
 {
-    class PebbleNotFoundException : Exception
+    public class PebbleException : Exception
     {
-        public String PebbleID { get; private set; }
-        public PebbleNotFoundException(String pebbleid = "0000")
-        {
-            PebbleID = pebbleid;
-        }
+        public PebbleException()
+        { }
 
-        public PebbleNotFoundException(String message, String pebbleid = "0000")
-            : base(message)
-        {
-            PebbleID = pebbleid;
-        }
+        public PebbleException( string message )
+            : base( message )
+        { }
 
-        public PebbleNotFoundException(String message, Exception inner, String pebbleid = "0000")
-            : base(message, inner)
-        {
-            PebbleID = pebbleid;
-        }
+        public PebbleException( string message, Exception innerException )
+            : base( message, innerException )
+        { }
     }
 }

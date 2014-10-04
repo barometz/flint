@@ -1,0 +1,74 @@
+﻿<UserControl x:Class="Windows.Pebble.Views.PebbleInfoView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:viewModels="clr-namespace:Windows.Pebble.ViewModels"
+             xmlns:core="clr-namespace:Flint.Core;assembly=Flint.Core"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="300">
+    <UserControl.DataContext>
+        <viewModels:PebbleInfoViewModel />
+    </UserControl.DataContext>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <GroupBox Header="Time">
+        <Grid Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding PebbleTime, StringFormat='Pebble: {0:G}'}" />
+            <TextBlock Text="{Binding CurrentTime, StringFormat='System: {0:G}'}" Grid.Row="1" Grid.Column="0" />
+            <Button Command="{Binding SyncTimeCommand}" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" 
+                    VerticalAlignment="Center" ToolTip="Sync pebble time with system time">
+                <Path Style="{StaticResource SyncIconStyle}" Height="18"/>
+            </Button>
+        </Grid>
+        </GroupBox>
+        <Grid Grid.Row="1" Margin="0,5,0,0">
+            <Grid.Resources>
+                <DataTemplate x:Key="FirmwareTemplate" DataType="core:FirmwareVersion">
+                    <TextBlock>
+                        <Run Text="{Binding Version, StringFormat='Version: {0}', Mode=OneWay}"/>
+                        <LineBreak/>
+                        <Run Text="{Binding Commit, StringFormat='Commit: {0}', Mode=OneWay}"/>
+                        <Run Text="{Binding Timestamp, StringFormat='({0:d})', Mode=OneWay}"/>
+                        <LineBreak/>
+                        <Run Text="{Binding HardwarePlatform, StringFormat='Hardware Platform: {0}', Mode=OneWay}"/>
+                        <LineBreak/>
+                        <Run Text="{Binding MetadataVersion, StringFormat='Metadata Version: {0}', Mode=OneWay}"/>
+                    </TextBlock>
+                </DataTemplate>
+            </Grid.Resources>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="Firmware">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <ContentPresenter Content="{Binding Firmware}" ContentTemplate="{StaticResource FirmwareTemplate}" Margin="10"/>
+                    <TextBlock Grid.Row="1">
+                        <Hyperlink Command="{Binding UpdateFirmwareCommand}">Update</Hyperlink>
+                    </TextBlock>
+                </Grid>
+            </GroupBox>
+            <GroupBox Header="Recovery Firmware" Grid.Column="1">
+                <ContentPresenter Content="{Binding RecoveryFirmware}" ContentTemplate="{StaticResource FirmwareTemplate}" Margin="10"/>
+            </GroupBox>
+        </Grid>
+    </Grid>
+</UserControl>

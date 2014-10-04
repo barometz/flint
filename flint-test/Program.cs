@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Threading.Tasks;
 using flint;
 using SharpMenu;
 using System.Collections.Generic;
+using flint.Responses;
 
 namespace flint_test
 {
@@ -52,7 +54,7 @@ namespace flint_test
             
             try
             {
-                pebble.Connect();
+                pebble.ConnectAsync().Wait();
             }
             catch (System.IO.IOException e)
             {
@@ -66,32 +68,29 @@ namespace flint_test
             Console.WriteLine(pebble);
 
             menu = new SharpMenu<Action>();
-            menu.Add(() => pebble.Ping(235), "Send the Pebble a ping");
-            menu.Add(() => pebble.NotificationSMS("+3278051200", "It's time."), "Send an SMS notification");
-            menu.Add(() => pebble.NotificationMail("Your pal", "URGENT NOTICE", "There is a thing you need to do. Urgently."),
+            menu.Add(() => pebble.PingAsync(235).Wait(), "Send the Pebble a ping");
+            menu.Add(() => pebble.NotificationSMSAsync("+3278051200", "It's time.").Wait(), "Send an SMS notification");
+            menu.Add(() => pebble.NotificationMailAsync("Your pal", "URGENT NOTICE", "There is a thing you need to do. Urgently.").Wait(),
                 "Send an email notification");
-            menu.Add(() => pebble.SetNowPlaying("That dude", "That record", "That track"), "Send some metadata to the music app");
-            menu.Add(() => pebble.BadPing(), "Send a bad ping to trigger a LOGS response");
-            menu.Add(() => Console.WriteLine(pebble.GetTime().Time), "Get the time from the Pebble");
-            menu.Add(() => pebble.SetTime(DateTime.Now), "Sync Pebble time");
-            menu.Add(() => Console.WriteLine(pebble.GetAppbankContents().AppBank), "Get the contents of the app bank");
+            menu.Add(() => pebble.SetNowPlayingAsync("That dude", "That record", "That track").Wait(), "Send some metadata to the music app");
+            menu.Add(() => pebble.BadPingAsync().Wait(), "Send a bad ping to trigger a LOGS response");
+            menu.Add( () => Console.WriteLine( pebble.GetTimeAsync().Result.Time ), "Get the time from the Pebble" );
+            menu.Add(() => pebble.SetTimeAsync(DateTime.Now).Wait(), "Sync Pebble time");
+            menu.Add(() => Console.WriteLine(pebble.GetAppbankContentsAsync().Result.AppBank), "Get the contents of the app bank");
             menu.Add(() => DeleteApp(pebble), "Delete an app from the Pebble");
             menu.Add(() => pebble.Disconnect(), "Exit");
 
-            pebble.OnDisconnect += pebble_OnDisconnect;
-
-            pebble.MessageReceived += pebble_MessageReceived;
             // Subscribe to specific events
-            pebble.LogReceived += pebble_LogReceived;
-            pebble.PingReceived += pebble_PingReceived;
-            pebble.MediaControlReceived += pebble_MediaControlReceived;
+            pebble.RegisterCallback<MusicControlResponse>( pebble_MediaControlReceived );
             // Subscribe to an event for a particular endpoint
-            pebble.RegisterEndpointCallback(Pebble.Endpoints.PING, pingReceived);
+            pebble.RegisterCallback<PingResponse>(pingReceived);
 
-            pebble.GetVersion();
-            Console.WriteLine(pebble.Firmware);
-            Console.WriteLine(pebble.RecoveryFirmware);
-
+            FirmwareVersionResponse firmwareResponse = pebble.GetFirmwareVersionAsync().Result;
+            if (firmwareResponse.Success)
+            {
+                Console.WriteLine(firmwareResponse.Firmware);
+                Console.WriteLine(firmwareResponse.RecoveryFirmware);
+            }
             while (pebble.Alive)
             {
                 menu.WriteMenu();
@@ -101,43 +100,21 @@ namespace flint_test
             }
         }
 
-        static void DeleteApp(Pebble pebble)
+        static async Task DeleteApp(Pebble pebble)
         {
-            var applist = pebble.GetAppbankContents().AppBank.Apps;
+            var applist = (await pebble.GetAppbankContentsAsync()).AppBank.Apps;
             Console.WriteLine("Choose an app to remove");
             AppBank.App result = SharpMenu<AppBank.App>.WriteAndPrompt(applist);
-            AppbankInstallMessageEventArgs ev = pebble.RemoveApp(result);
+            AppbankInstallResponse ev = await pebble.RemoveAppAsync(result);
             Console.WriteLine(ev.MsgType);
         }
 
-        static void pebble_OnDisconnect(object sender, EventArgs e)
+        static void pebble_MediaControlReceived(MusicControlResponse response)
         {
-            Console.WriteLine("Pebble disconnected.  Hit enter to exit.");
-            Console.ReadLine();
-            System.Environment.Exit(0);
+            Console.WriteLine("Received " + response.Command.ToString());
         }
 
-        static void pebble_MediaControlReceived(object sender, MediaControlReceivedEventArgs e)
-        {
-            Console.WriteLine("Received " + e.Command.ToString());
-        }
-
-        static void pebble_MessageReceived(object sender, MessageReceivedEventArgs e)
-        {
-            // Method for testing anything.
-        }
-
-        static void pebble_PingReceived(object sender, PingReceivedEventArgs e)
-        {
-            Console.WriteLine("Received PING reply: " + e.Cookie.ToString());
-        }
-
-        static void pebble_LogReceived(object sender, LogReceivedEventArgs e)
-        {
-            Console.WriteLine(e);
-        }
-
-        static void pingReceived(object sender, MessageReceivedEventArgs e)
+        static void pingReceived(PingResponse pingResponse)
         {
             Console.WriteLine("Received a ping through generic endpoint handler");
         }
