@@ -1,6 +1,8 @@
 Flint
 =====
 
+**note** Flint is no longer maintained, at least not in barometz/flint. The latest updates were put together by Keboo, and I recommend taking a look at their project: https://github.com/Keboo/PebbleSharp
+
 A .NET library for talking to Pebble smartwatches. Based on documentation at http://pebbledev.org/wiki/Main_Page 
 and the implementation at https://github.com/Hexxeh/libpebble plus its various forks.
 
